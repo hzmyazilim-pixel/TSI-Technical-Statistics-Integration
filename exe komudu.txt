@@ -1,0 +1,1 @@
+pyinstaller --noconfirm --onefile --windowed --name "TSI_Yonetim_paneli" --icon "static/TSI_logo.ico" --add-data "templates;templates" --add-data "static;static" --add-data "static/TSI_logo.ico;static" app.py

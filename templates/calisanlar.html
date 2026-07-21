@@ -1,0 +1,895 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/all.min.css') }}" rel="stylesheet">
+
+<style>
+    /* --- HZM ENDÜSTRİYEL MİNİMALİZM TEMA KÖK AYARLAR --- */
+    :root {
+        --hzm-black: #000000;
+        --hzm-dark-1: #050505;
+        --hzm-dark-2: #0a0a0a;
+        --hzm-dark-3: #111111;
+        --hzm-border: #2a2a2a;
+        --hzm-border-light: #444444;
+        --hzm-text: #ffffff;
+        --hzm-text-muted: #888888;
+        --hzm-accent: #0dcaf0;
+        --hzm-danger: #ff4444;
+        --hzm-warning: #ffc107;
+    }
+
+    body {
+        background-color: var(--hzm-dark-1);
+        color: var(--hzm-text);
+    }
+
+    [data-theme="dark"] .hzm-panel {
+        background-color: var(--hzm-black) !important;
+        border: 1px solid var(--hzm-border) !important;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+        opacity: 0.8;
+        transition: 0.2s;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+    /* Ana Tablo Ayarları */
+    .hzm-table {
+        width: 100%;
+        margin-bottom: 0;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    .hzm-table th {
+        padding: 15px 12px;
+        text-transform: uppercase;
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+        color: var(--hzm-text-muted);
+        border-bottom: 2px solid var(--hzm-border);
+    }
+    .hzm-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--hzm-dark-3);
+    }
+    .emp-row:hover { background: var(--hzm-dark-2); cursor: pointer; }
+
+    .hzm-search-wrapper {
+        background: var(--hzm-black);
+        border: 1px solid var(--hzm-border);
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    .hzm-search-input {
+        background: transparent !important;
+        border: none !important;
+        color: #fff !important;
+        box-shadow: none !important;
+    }
+
+    /* --- OPERASYON MERKEZİ DASHBOARD TASARIMI --- */
+    #fullPanelModal .modal-content {
+        background-color: var(--hzm-black);
+        border: 1px solid var(--hzm-border-light);
+        border-radius: 0;
+        box-shadow: 0 0 50px rgba(0,0,0,0.9);
+    }
+
+    /* Modern Panel Başlıkları */
+    .hzm-section-title {
+        font-size: 0.7rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--hzm-accent);
+        border-bottom: 1px solid var(--hzm-border);
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+
+    /* Dashboard İnputları */
+    .hzm-dash-input {
+        background: var(--hzm-dark-3) !important;
+        border: 1px solid var(--hzm-border) !important;
+        color: #fff !important;
+        font-size: 0.85rem;
+        border-radius: 2px;
+        padding: 8px 10px;
+        transition: 0.3s border;
+    }
+    .hzm-dash-input:focus {
+        border-color: var(--hzm-accent) !important;
+        box-shadow: none !important;
+        outline: none;
+    }
+    
+    /* Vurgulu Yevmiye İnputu */
+    .hzm-wage-highlight {
+        background: #000 !important;
+        border: 1px solid #555 !important;
+        color: #fff !important;
+        font-weight: 900;
+        letter-spacing: 1px;
+    }
+
+    .hzm-dash-label {
+        font-size: 0.65rem;
+        color: var(--hzm-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    /* Özet Rapor Widget'ları */
+    .hzm-stat-card {
+        background: var(--hzm-dark-1);
+        border: 1px solid var(--hzm-border);
+        padding: 15px;
+        border-radius: 4px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        height: 100%;
+        transition: 0.2s;
+    }
+    .hzm-stat-card:hover { border-color: var(--hzm-border-light); background: var(--hzm-dark-2); }
+    .hzm-stat-label { font-size: 0.65rem; color: var(--hzm-text-muted); letter-spacing: 1px; margin-bottom: 5px; text-transform: uppercase; }
+    .hzm-stat-val { font-size: 1.3rem; color: #fff; font-weight: 700; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Yevmiye Geçmiş Tablosu */
+    .hzm-wage-history-container {
+        border: 1px solid var(--hzm-border);
+        background: var(--hzm-dark-1);
+        max-height: 180px;
+        overflow-y: auto;
+    }
+    .hzm-wage-history-container table { width: 100%; font-size: 0.75rem; font-family: monospace; text-align: center; margin: 0; }
+    .hzm-wage-history-container th { background: var(--hzm-dark-3); color: var(--hzm-text-muted); padding: 8px 5px; font-weight: normal; border-bottom: 1px solid var(--hzm-border); position: sticky; top: 0; z-index: 2; }
+    .hzm-wage-history-container td { padding: 8px 5px; border-bottom: 1px solid var(--hzm-dark-3); color: var(--hzm-text); }
+
+    /* Ana Hareket Scroll */
+    .history-scroll {
+        max-height: 50vh;
+        overflow-y: auto;
+        background: var(--hzm-dark-1);
+        border: 1px solid var(--hzm-border);
+    }
+    
+    /* Özel Kaydırma Çubukları (Scrollbar) */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--hzm-black); }
+    ::-webkit-scrollbar-thumb { background: var(--hzm-border-light); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #888; }
+
+    @media (max-width: 992px) {
+        .modal-body .row { flex-direction: column; }
+        .border-end { border-right: none !important; border-bottom: 1px solid var(--hzm-border) !important; }
+        .hzm-stat-val { font-size: 1.1rem; }
+    }
+
+    @media print { 
+        @page { margin: 10mm; } 
+
+        nav, .sidebar, header, footer, .d-print-none, 
+        .sidebar-wrapper, .navbar, .filter-separator, #dateRangeForm, .search-container-header { 
+            display: none !important; 
+        } 
+
+        main, .content, .container-fluid, #main-wrapper { 
+            display: block !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; margin-bottom: 10px !important; }
+        .table-responsive { overflow: visible !important; }
+        body { background-color: white !important; -webkit-print-color-adjust: exact !important; }
+    }
+    
+</style>
+
+<div class="container-fluid mt-3" data-theme="dark">
+    <div class="card hzm-panel mb-4 shadow-sm">
+        <div class="card-body p-3 p-md-4">
+            <h6 class="fw-bold mb-3 border-bottom border-dark pb-2 text-uppercase text-info">
+                <i class="fas fa-plus-circle me-2"></i>SİSTEME PERSONEL TANIMLA
+            </h6>
+            <form method="POST" class="row g-3 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="hzm-dash-label">AD SOYAD</label>
+                    <input type="text" name="name" class="form-control hzm-dash-input" required>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="hzm-dash-label">TC KİMLİK NO</label>
+                    <input type="text" name="tc_no" class="form-control hzm-dash-input" minlength="11" maxlength="11">
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="hzm-dash-label">İLETİŞİM HATTI</label>
+                    <input type="text" name="phone" class="form-control hzm-dash-input">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="hzm-dash-label">GİRİŞ TARİHİ</label>
+                    <input type="date" name="entry_date" id="main_entry_date" class="form-control hzm-dash-input" onchange="persistDate(this.id, this.value)">
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-outline-info w-100 fw-bold" style="padding: 8px;"><i class="fas fa-save me-2"></i>KAYDET</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="hzm-search-wrapper shadow-sm">
+        <i class="fas fa-search text-info me-3"></i>
+        <input type="text" id="staffSearch" onkeyup="filterStaff()" class="form-control hzm-search-input" placeholder="PERSONEL ADI VEYA TC KİMLİK İLE SORGULA...">
+    </div>
+
+    <div class="card hzm-panel shadow-sm mb-5">
+        <div class="table-responsive">
+            <table class="hzm-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">#</th>
+                        <th>PERSONEL KİMLİĞİ</th>
+                        <th>GÜNCEL YEVMİYE</th>
+                        <th class="text-center">KONTROL EKRANI</th>
+                    </tr>
+                </thead>
+                <tbody id="staffTableBody">
+                    {% for emp in employees %}
+                    <tr class="emp-row" onclick="openFullPanel('{{ emp.id }}')">
+                        <td class="ps-4 text-muted font-monospace">{{ loop.index }}</td>
+                        <td>
+                            <div class="fw-bold text-white fs-6 emp-name">{{ emp.name }}</div>
+                            <small class="text-muted font-monospace emp-tc"><i class="fas fa-id-card me-1 opacity-50"></i>{{ emp.tc_no or 'TC KAYITSIZ' }}</small>
+                        </td>
+                        <td class="text-white fw-bold font-monospace fs-6">₺{{ "{:,.2f}".format(emp.daily_wage) }}</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm text-info" style="background: var(--hzm-dark-3); border: 1px solid var(--hzm-border-light); font-size: 0.75rem; letter-spacing: 0.5px;">
+                                <i class="fas fa-sliders-h me-1 text-info"></i> DETAY & İŞLEM
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fullPanelModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            
+            <div class="modal-header d-flex justify-content-between align-items-center bg-black border-bottom border-dark p-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="text-info" style="font-size: 2rem;"><i class="fas fa-fingerprint"></i></div>
+                    <div>
+                        <h4 class="mb-0 text-white fw-bold text-uppercase" id="m_title" style="letter-spacing: 1px;">PERSONEL SORGULANIYOR...</h4>
+                        <small class="text-muted font-monospace" style="letter-spacing: 2px;">TSI - OPERASYON & PUANTAJ KONTROLÜ</small>
+                    </div>
+                </div>
+                <div class="text-end d-none d-md-block">
+                    <small class="text-muted d-block" style="font-size: 0.65rem; letter-spacing: 1px;">GÜNCEL BİRİM YEVMİYE</small>
+                    <div class="text-white fw-bold font-monospace fs-3">₺<span id="m_top_wage">0.00</span></div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-3" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-0">
+                <div class="row g-0 h-100">
+                    
+                    <div class="col-12 col-lg-3 border-end border-dark p-4 d-flex flex-column gap-4" style="background: var(--hzm-black);">
+                        
+                        <form id="fullUpdateForm" method="POST">
+                            <div>
+                                <div class="hzm-section-title"><i class="fas fa-id-badge me-2"></i>KİMLİK KARTI</div>
+                                <div class="mb-3">
+                                    <label class="hzm-dash-label">Tam İsim</label>
+                                    <input type="text" name="name" id="f_name" class="w-100 hzm-dash-input">
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <label class="hzm-dash-label">TC Kimlik</label>
+                                        <input type="text" name="tc_no" id="f_tc" class="w-100 hzm-dash-input">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="hzm-dash-label">İletişim Hattı</label>
+                                        <input type="text" name="phone" id="f_phone" class="w-100 hzm-dash-input">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="hzm-dash-label">Sisteme Giriş Tarihi</label>
+                                    <input type="date" name="entry_date" id="f_entry" class="w-100 hzm-dash-input">
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <div class="hzm-section-title text-warning"><i class="fas fa-coins me-2"></i>YEVMİYE MOTORU</div>
+                                
+                                <div class="p-3 mb-3 rounded" style="background: var(--hzm-dark-1); border: 1px solid var(--hzm-border);">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <label class="hzm-dash-label text-white m-0">YENİ İŞLEM GİRİŞİ</label>
+                                        <i class="fas fa-bolt text-warning" style="font-size: 10px;"></i>
+                                    </div>
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6">
+                                            <label class="hzm-dash-label" style="font-size: 9px;">BAŞLANGIÇ</label>
+                                            <input type="date" name="wage_start_date" id="f_wage_start" class="w-100 hzm-dash-input px-1 text-center" onchange="persistDate(this.id, this.value)">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="hzm-dash-label" style="font-size: 9px;">BİTİŞ</label>
+                                            <input type="date" name="wage_end_date" id="f_wage_end" class="w-100 hzm-dash-input px-1 text-center" onchange="persistDate(this.id, this.value)">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="hzm-dash-label" style="font-size: 9px;">GÜNLÜK ÜCRET (₺)</label>
+                                        <input type="number" step="0.01" name="daily_wage" id="f_wage" class="w-100 hzm-dash-input hzm-wage-highlight text-center fs-5">
+                                    </div>
+                                    
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-sm btn-info flex-grow-1 fw-bold text-black border-0" style="background: var(--hzm-accent);">ONAYLA</button>
+                                        <button type="button" onclick="clearWageInputs()" class="btn btn-sm btn-dark border-secondary px-3" title="Temizle"><i class="fas fa-eraser text-danger"></i></button>
+                                    </div>
+                                </div>
+
+                                <label class="hzm-dash-label">GEÇMİŞ DÖNEM YEVMİYELERİ</label>
+                                <div class="hzm-wage-history-container rounded">
+                                    <table class="table-borderless">
+                                        <thead><tr><th>BAŞLANGIÇ</th><th>BİTİŞ</th><th class="text-end pe-2">TUTAR</th></tr></thead>
+                                        <tbody id="gecmis_yevmiye_body">
+                                            </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <div class="mt-auto pt-4 border-top border-dark">
+                            <button onclick="confirmDelete(currentEmpId)" class="btn btn-sm btn-outline-danger w-100" style="letter-spacing: 1px; font-size: 10px;"><i class="fas fa-trash me-2"></i>PERSONELİ SİSTEMDEN SİL</button>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-9 p-4" style="background: var(--hzm-dark-1);">
+                        
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom border-dark gap-3">
+                            <div class="hzm-section-title mb-0 border-0 pb-0"><i class="fas fa-chart-line me-2"></i>HAREKET & RAPORLAMA DÖKÜMÜ</div>
+                            
+                            <div class="d-flex flex-wrap gap-2">
+                                <select id="quick_month" class="form-select form-select-sm hzm-dash-input text-info border-dark" style="width: 110px;" onchange="setQuickMonth(this.value)">
+                                    <option value="" class="text-white">Aylık Seçim</option>
+                                    <option value="01">Ocak</option><option value="02">Şubat</option><option value="03">Mart</option>
+                                    <option value="04">Nisan</option><option value="05">Mayıs</option><option value="06">Haziran</option>
+                                    <option value="07">Temmuz</option><option value="08">Ağustos</option><option value="09">Eylül</option>
+                                    <option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
+                                </select>
+                                <input type="date" id="filter_start" class="form-control form-control-sm hzm-dash-input border-dark text-white" style="width: 120px;" onchange="persistDate(this.id, this.value)">
+                                <input type="date" id="filter_end" class="form-control form-control-sm hzm-dash-input border-dark text-white" style="width: 120px;" onchange="persistDate(this.id, this.value)">
+                                
+                                <div class="btn-group shadow-sm">
+                                    <button onclick="applyFilter()" class="btn btn-sm btn-dark border-secondary text-info"><i class="fas fa-filter"></i></button>
+                                    <button onclick="exportDetayExcel(currentEmpId)" class="btn btn-sm btn-dark border-secondary text-success"><i class="fas fa-file-excel"></i></button>
+                                    <button onclick="printHistory()" class="btn btn-sm btn-dark border-secondary text-light"><i class="fas fa-print"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="summary_box" class="row row-cols-2 row-cols-md-5 g-2 mb-4 d-none">
+                            <div class="col">
+                                <div class="hzm-stat-card">
+                                    <div class="hzm-stat-label">TOPLAM MESAİ</div>
+                                    <div class="hzm-stat-val text-white" id="sum_work">0<span style="font-size: 10px; color: #666; margin-left:2px;">G</span></div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="hzm-stat-card border-info" style="background: rgba(13,202,240,0.05);">
+                                    <div class="hzm-stat-label text-info">MESAİ GÜNÜ</div>
+                                    <div class="hzm-stat-val text-info" id="sum_overtime_days">0<span style="font-size: 10px; opacity:0.5; margin-left:2px;">G</span></div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="hzm-stat-card">
+                                    <div class="hzm-stat-label">BRÜT HAKEDİŞ</div>
+                                    <div class="hzm-stat-val text-white" id="sum_hakedis">₺0</div>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="hzm-stat-card border-danger" style="background: rgba(220,53,69,0.05);">
+                                    <div class="hzm-stat-label text-danger">ALINAN AVANS</div>
+                                    <div class="hzm-stat-val text-danger" id="sum_advance">₺0</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-auto flex-grow-1">
+                                <div class="hzm-stat-card border-light align-items-center justify-content-center" style="background: var(--hzm-black);">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="text-end">
+                                            <div class="hzm-stat-label text-white opacity-50 m-0">ÖDENECEK NET BAKİYE</div>
+                                        </div>
+                                        <div class="hzm-stat-val fs-3 text-white" id="sum_net">₺0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="history-scroll rounded shadow-sm">
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover mb-0 text-nowrap align-middle" style="font-size: 0.8rem; border-color: var(--hzm-dark-3);">
+                                    <thead class="sticky-top" style="background: var(--hzm-black); z-index: 5;">
+                                        <tr>
+                                            <th class="border-bottom border-dark text-center py-3 ps-3"><i class="far fa-calendar-alt me-2"></i>TARİH</th>
+                                            <th class="border-bottom border-dark text-black py-3">İŞ GÜNÜ / MESAİ GÜNÜ</th>
+                                            <th class="border-bottom border-dark text-white py-3">G. YEVMİYE</th>
+                                            <th class="text-white border-bottom border-dark py-3">HAKEDİŞ</th>
+                                            <th class="text-warning border-bottom border-dark py-3">ASGARİ</th>
+                                            <th class="text-danger border-bottom border-dark py-3">AVANS/KESİNTİ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="f_history_body" class="font-monospace">
+                                        </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
+
+<script>
+    let myModal = null;
+    let currentEmpId = null;
+    let fullHistoryData = [];
+    let initialDailyWage = 0;
+
+    function persistDate(id, val) { localStorage.setItem('hzm_last_' + id, val); }
+
+    function loadPersistedDates() {
+        const ids = ['main_entry_date', 'f_wage_start', 'f_wage_end', 'filter_start', 'filter_end'];
+        ids.forEach(id => {
+            const val = localStorage.getItem('hzm_last_' + id);
+            const el = document.getElementById(id);
+            if (val && el) el.value = val;
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const modalEl = document.getElementById('fullPanelModal');
+        if (modalEl) myModal = new bootstrap.Modal(modalEl);
+        loadPersistedDates();
+        
+        // --- SAYFA YÜKLENDİĞİNDE TÜRKÇE ALFABETİK SIRALAMAYI ÇALIŞTIR ---
+        sortStaffTurkish();
+    });
+
+    // --- TÜRKÇE KARAKTER DUYARLI ALFABETİK SIRALAMA MOTORU ---
+    function sortStaffTurkish() {
+        const tbody = document.getElementById('staffTableBody');
+        if (!tbody) return;
+
+        const rows = Array.from(tbody.querySelectorAll('.emp-row'));
+
+        rows.sort((a, b) => {
+            const nameA = a.querySelector('.emp-name').innerText.trim();
+            const nameB = b.querySelector('.emp-name').innerText.trim();
+            return nameA.localeCompare(nameB, 'tr');
+        });
+
+        rows.forEach((row, index) => {
+            tbody.appendChild(row);
+            row.querySelector('td:first-child').innerText = index + 1;
+        });
+    }
+
+    function filterStaff() {
+        const filter = document.getElementById('staffSearch').value.toUpperCase();
+        const rows = document.querySelectorAll('#staffTableBody .emp-row');
+        rows.forEach(row => {
+            const name = row.querySelector('.emp-name').innerText.toUpperCase();
+            const tc = row.querySelector('.emp-tc').innerText.toUpperCase();
+            row.style.display = (name.includes(filter) || tc.includes(filter)) ? "" : "none";
+        });
+    }
+
+    function setQuickMonth(month) {
+        if (!month) return;
+        const year = new Date().getFullYear();
+        const s = `${year}-${month}-01`;
+        const e = new Date(year, month, 0).toISOString().split('T')[0];
+        document.getElementById('filter_start').value = s;
+        document.getElementById('filter_end').value = e;
+        persistDate('filter_start', s);
+        persistDate('filter_end', e);
+        applyFilter();
+    }
+
+    function openFullPanel(id) {
+        currentEmpId = id;
+        document.getElementById('f_history_body').innerHTML = '<tr><td colspan="6" class="text-center py-5"><div class="spinner-border text-info" role="status"></div></td></tr>';
+
+        fetch(`/api/personel-detay-full/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('m_title').innerText = data.info.name;
+                document.getElementById('f_name').value = data.info.name;
+                document.getElementById('f_tc').value = data.info.tc_no || '';
+                document.getElementById('f_phone').value = data.info.phone || '';
+                initialDailyWage = parseFloat(data.info.daily_wage);
+                document.getElementById('f_wage').value = initialDailyWage || '';
+                
+                const topWages = document.querySelectorAll('#m_top_wage');
+                topWages.forEach(el => el.innerText = initialDailyWage.toLocaleString('tr-TR', { minimumFractionDigits: 2 }));
+                
+                document.getElementById('f_entry').value = data.info.entry_date;
+                document.getElementById('fullUpdateForm').action = `/calisan-guncelle/${id}`;
+
+                if (!document.getElementById('f_wage_start').value) {
+                    const today = new Date();
+                    document.getElementById('f_wage_start').value = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+                    document.getElementById('f_wage_end').value = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+                }
+
+                fullHistoryData = data.history || [];
+                renderHistoryTable(fullHistoryData);
+                renderWageHistory(fullHistoryData);
+                
+                if (myModal) myModal.show();
+            });
+    }
+
+    function renderWageHistory(historyData) {
+        let puantajList = historyData.filter(h => parseFloat(h.daily_wage) > 0);
+        puantajList.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        let periods = [];
+        if (puantajList.length > 0) {
+            let currentWage = parseFloat(puantajList[0].daily_wage);
+            let start = puantajList[0].date;
+            let end = puantajList[0].date;
+
+            for (let i = 1; i < puantajList.length; i++) {
+                let row = puantajList[i];
+                let wage = parseFloat(row.daily_wage);
+
+                if (wage === currentWage) {
+                    end = row.date;
+                } else {
+                    periods.push({ start: start, end: end, wage: currentWage });
+                    currentWage = wage;
+                    start = row.date;
+                    end = row.date;
+                }
+            }
+            periods.push({ start: start, end: end, wage: currentWage });
+        }
+
+        let tbody = document.getElementById('gecmis_yevmiye_body');
+        tbody.innerHTML = '';
+        
+        if (periods.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted" style="padding: 10px;">Kayıt yok.</td></tr>';
+            return;
+        }
+
+        periods.reverse().forEach(p => {
+            let sd = new Date(p.start);
+            let ed = new Date(p.end);
+            let startStr = sd.getDate() + '.' + ('0' + (sd.getMonth() + 1)).slice(-2) + '.' + sd.getFullYear();
+            let endStr = ed.getDate() + '.' + ('0' + (ed.getMonth() + 1)).slice(-2) + '.' + ed.getFullYear();
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td class="text-secondary opacity-75">${startStr}</td>
+                    <td class="text-secondary opacity-75">${endStr}</td>
+                    <td class="text-end text-white fw-bold">₺${p.wage.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `;
+        });
+    }
+
+    function clearWageInputs() {
+        document.getElementById('f_wage_start').value = '';
+        document.getElementById('f_wage_end').value = '';
+        document.getElementById('f_wage').value = '';
+    }
+
+    // --- ÖN YÜZ HESAPLAMA MOTORU & TARİHİ EN YENİDEN EN ESKİYE SIRALAMA ---
+    function renderHistoryTable(dataList) {
+        let html = '';
+        let tWork = 0, tOvertimeDays = 0, tHak = 0, tAdv = 0, tAsgariPay = 0;
+
+        // TARİHİ BUGÜNDEN (EN YENİDEN) GEÇMİŞE (EN ESKİYE) DOĞRU SIRALA
+        dataList.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        dataList.forEach(h => {
+            let workVal = parseFloat(h.work_value || 0) || 0;
+            let otDaysVal = parseFloat(h.overtime_hours || 0) || 0; 
+            let dailyWageAtDay = parseFloat(h.daily_wage || 0) || initialDailyWage;
+            
+            let rowAsgari = '-', rowAvans = '-', rowWork = '-', rowHakedis = '-';
+
+            if (h.desc === 'Puantaj') {
+                let hakVal = (workVal + otDaysVal) * dailyWageAtDay;
+
+                tWork += workVal;
+                tOvertimeDays += otDaysVal;
+                tHak += hakVal;
+
+                if (workVal > 0 && otDaysVal > 0) {
+                    rowWork = `<span class="text-white fw-bold">${workVal} G</span> <span class="text-muted mx-1">+</span> <span class="text-info">${otDaysVal.toFixed(2)} G (Mesai)</span>`;
+                } else if (workVal > 0) {
+                    rowWork = `<span class="text-white fw-bold">${workVal} G</span>`;
+                } else if (otDaysVal > 0) {
+                    rowWork = `<span class="text-info fw-bold">${otDaysVal.toFixed(2)} G (Mesai)</span>`;
+                } else {
+                    rowWork = '<span class="text-muted opacity-50">0 G</span>';
+                }
+
+                rowHakedis = '₺' + hakVal.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+            } else if (h.desc === 'Ödeme 1 (Maaş)') {
+                let p1 = parseFloat(h.advance || 0) || 0;
+                tAsgariPay += p1;
+                rowAsgari = '₺' + p1.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+            } else {
+                let adv = parseFloat(h.advance || 0) || 0;
+                tAdv += adv;
+                rowAvans = '₺' + adv.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+            }
+
+            html += `<tr>
+                <td class="ps-3 text-secondary opacity-75">${h.date ? h.date.split('-').reverse().join('.') : '-'}</td>
+                <td>${rowWork}</td>
+                <td class="text-white fw-bold">₺${dailyWageAtDay.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
+                <td class="text-white fw-bold">${rowHakedis}</td>
+                <td class="text-warning fw-bold">${rowAsgari}</td>
+                <td class="text-danger fw-bold">${rowAvans}</td>
+            </tr>`;
+        });
+
+        document.getElementById('f_history_body').innerHTML = html || '<tr><td colspan="6" class="text-center py-4 text-muted">Belirtilen aralıkta kayıtlı puantaj veya hareket bulunamadı.</td></tr>';
+
+        // Widget Alanlarının Eşitlenmesi
+        document.getElementById('sum_work').innerHTML = tWork.toFixed(2) + '<small class="text-muted" style="font-size: 10px; margin-left:2px;">G</small>';
+        document.getElementById('sum_overtime_days').innerHTML = tOvertimeDays.toFixed(2) + '<small class="text-muted" style="font-size: 10px; margin-left:2px;">G</small>';
+        document.getElementById('sum_hakedis').innerText = '₺' + tHak.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+        document.getElementById('sum_advance').innerText = '₺' + tAdv.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+
+        const netKalan = tHak - tAsgariPay - tAdv;
+        const netEl = document.getElementById('sum_net');
+        netEl.innerText = '₺' + netKalan.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+        netEl.classList.remove('text-white', 'text-danger');
+        netEl.classList.add(netKalan < 0 ? 'text-danger' : 'text-white');
+
+        document.getElementById('summary_box').classList.remove('d-none');
+    }
+
+    function applyFilter() {
+        const start = document.getElementById('filter_start').value;
+        const end = document.getElementById('filter_end').value;
+        if (start && end) {
+            const filtered = fullHistoryData.filter(h => h.date >= start && h.date <= end);
+            renderHistoryTable(filtered);
+        }
+    }
+
+    function exportDetayExcel(empId) {
+        const start = document.getElementById('filter_start').value;
+        const end = document.getElementById('filter_end').value;
+        let url = `/export-detay-excel/${empId}`;
+        if (start && end) url += `?start_date=${start}&end_date=${end}`;
+        window.location.href = url;
+    }
+
+    function confirmDelete(id) {
+        Swal.fire({
+            title: 'DİKKAT: PERSONEL SİLİNİYOR!',
+            text: 'Bu işlem geri alınamaz. Personel ve puantaj verileri kalıcı olarak silinecektir.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#333',
+            confirmButtonText: 'EVET, SİSTEMDEN SİL',
+            cancelButtonText: 'İPTAL ET',
+            background: '#0a0a0a',
+            color: '#fff'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = `/calisan-sil/${id}`;
+            }
+        });
+    }
+
+    // --- ENTEGRE VE GÜVENLİ YAZDIRMA MOTORU ---
+    function printHistory() {
+        const empName = document.getElementById('m_title').innerText;
+        const startDate = document.getElementById('filter_start').value;
+        const endDate = document.getElementById('filter_end').value;
+        let dateText = (startDate && endDate) ? `${startDate.split('-').reverse().join('.')} - ${endDate.split('-').reverse().join('.')}` : 'Tüm Zamanlar / Filtresiz';
+
+        const tHakedis = document.getElementById('sum_hakedis').innerText;
+        const tAdvance = document.getElementById('sum_advance').innerText;
+        const tNet = document.getElementById('sum_net').innerText;
+
+        let activeData = (startDate && endDate) ? 
+            fullHistoryData.filter(h => h.date >= startDate && h.date <= endDate) : [...fullHistoryData];
+
+        // Yazdırılan rapor verisinde de en yeni tarihi başa al
+        activeData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        let rowsHtml = "";
+        activeData.forEach(h => {
+            let workVal = parseFloat(h.work_value || 0) || 0;
+            let otDaysVal = parseFloat(h.overtime_hours || 0) || 0; 
+            let dailyWageAtDay = parseFloat(h.daily_wage || 0) || initialDailyWage;
+            
+            let rowAsgari = '-', rowAvans = '-', rowWork = '-', rowHakedis = '-';
+
+            if (h.desc === 'Puantaj') {
+                let hakVal = (workVal + otDaysVal) * dailyWageAtDay;
+                if (workVal > 0 && otDaysVal > 0) {
+                    rowWork = `${workVal} G + ${otDaysVal.toFixed(2)} G (Mesai)`;
+                } else if (workVal > 0) {
+                    rowWork = `${workVal} G`;
+                } else if (otDaysVal > 0) {
+                    rowWork = `${otDaysVal.toFixed(2)} G (Mesai)`;
+                } else {
+                    rowWork = '0 G';
+                }
+                rowHakedis = '₺' + hakVal.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+            } else if (h.desc === 'Ödeme 1 (Maaş)') {
+                let p1 = parseFloat(h.advance || 0) || 0;
+                rowAsgari = '₺' + p1.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+            } else {
+                let adv = parseFloat(h.advance || 0) || 0;
+                rowAvans = '₺' + adv.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
+            }
+
+            rowsHtml += `<tr>
+                <td>${h.date ? h.date.split('-').reverse().join('.') : '-'}</td>
+                <td>${rowWork}</td>
+                <td style="text-align:right;">₺${dailyWageAtDay.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</td>
+                <td style="text-align:right; font-weight:bold;">${rowHakedis}</td>
+                <td style="text-align:right; color:#b45309;">${rowAsgari}</td>
+                <td style="text-align:right; color:#dc3545;">${rowAvans}</td>
+            </tr>`;
+        });
+
+        if(rowsHtml === "") {
+            rowsHtml = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#666;">Kayıt bulunamadı.</td></tr>';
+        }
+
+        const oldFrame = document.getElementById('hzm-print-frame');
+        if (oldFrame) oldFrame.remove();
+
+        const iframe = document.createElement('iframe');
+        iframe.id = 'hzm-print-frame';
+        iframe.style.position = 'absolute';
+        iframe.style.width = '0px';
+        iframe.style.height = '0px';
+        iframe.style.border = 'none';
+        
+        iframe.onload = function() {
+            setTimeout(() => {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            }, 300);
+        };
+        
+        document.body.appendChild(iframe);
+
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(`
+            <!DOCTYPE html>
+            <html lang="tr">
+            <head>
+                <meta charset="UTF-8">
+                <title>${empName} - Hesap Dökümü</title>
+                <style>
+                    html, body { background: #ffffff !important; color: #000000 !important; font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
+                    .print-container { padding: 20px; }
+                    .header-area { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+                    .header-area h2 { margin: 0; font-weight: 800; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+                    .header-area h4 { margin: 6px 0 0; font-weight: bold; color: #111; font-size: 15px; text-transform: uppercase; }
+                    .header-area p { margin: 4px 0 0; font-size: 11px; font-weight: bold; color: #555; }
+                    
+                    .summary-box { display: flex; gap: 10px; margin-bottom: 20px; }
+                    .s-card { flex: 1; border: 1px solid #000; padding: 10px; text-align: center; background: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .s-card span { display: block; font-size: 10px; font-weight: bold; color: #444; margin-bottom: 3px; text-transform: uppercase; }
+                    .s-card strong { font-size: 16px; font-weight: 900; }
+                    
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                    th, td { border: 1px solid #000 !important; padding: 8px 6px; text-align: center; vertical-align: middle; }
+                    th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: bold; font-size: 11px; text-transform: uppercase; }
+                    
+                    .signatures { display: flex; justify-content: space-between; padding: 0 30px; margin-top: 40px; page-break-inside: avoid; break-inside: avoid; }
+                    .sig-box { text-align: center; width: 200px; }
+                    .sig-box strong { display: block; margin-bottom: 60px; font-size: 13px; text-decoration: underline; }
+                    .sig-line { border-top: 1px solid #000; padding-top: 4px; font-weight: bold; font-size: 11px; }
+                    
+                    .hzm-final-footer-container { 
+                        position: fixed; bottom: 0; left: 0; width: 100%;
+                        border-top: 1px solid #000; padding-top: 12px; padding-bottom: 12px;
+                        display: flex; justify-content: space-between; align-items: center;
+                        page-break-inside: avoid; break-inside: avoid;
+                    }
+                    .hzm-footer-logo-left { height: 26px; width: auto; object-fit: contain; }
+                    .hzm-footer-logo-right { height: 26px; width: auto; object-fit: contain; }
+                    .hzm-footer-text { font-size: 9px; color: #000 !important; font-weight: normal; text-align: center; max-width: 65%; line-height: 1.4; }
+                    .hzm-highlight { font-weight: bold; }
+                    
+                    @media print { 
+                        .hzm-final-footer-container { position: absolute; bottom: 0; }
+                        @page { size: auto; margin: 15mm 10mm 20mm 10mm; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="print-container">
+                    <div class="header-area">
+                        <h2>PERSONEL HESAP DÖKÜMÜ</h2>
+                        <h4>${empName}</h4>
+                        <p>Raporlama Dönemi: ${dateText}</p>
+                    </div>
+                    
+                    <div class="summary-box">
+                        <div class="s-card"><span>BRÜT HAKEDİŞ TOPLAMI</span><strong>${tHakedis}</strong></div>
+                        <div class="s-card"><span>AVANS / KESİNTİ TOPLAMI</span><strong>${tAdvance}</strong></div>
+                        <div class="s-card"><span>ÖDENECEK NET BAKİYE</span><strong>${tNet}</strong></div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>TARİH</th>
+                                <th>İŞ GÜNÜ / MESAİ GÜNÜ</th>
+                                <th style="text-align:right;">G. YEVMİYE</th>
+                                <th style="text-align:right;">HAKEDİŞ</th>
+                                <th style="text-align:right;">ASGARİ</th>
+                                <th style="text-align:right;">AVANS/KESİNTİ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                    
+                    <div class="signatures">
+                        <div class="sig-box">
+                            <strong>Çalışan İmza</strong>
+                            <div class="sig-line">Adı Soyadı: ${empName}</div>
+                        </div>
+                        <div class="sig-box">
+                            <strong>İşveren İmza</strong>
+                            <div class="sig-line">Kaşe / İmza</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="hzm-final-footer-container">
+                    <img src="/static/img/logo.png" class="hzm-footer-logo-left" onerror="this.style.display='none'">
+                    <div class="hzm-footer-text">
+                        Bu Belge <span class="hzm-highlight">HZM SOFTWARE & DESIGN SERVICES</span> Tarafından Geliştirilen 
+                        <span class="hzm-highlight">TSI: Technical Statistics & Integration</span> Sistemi İle Hazırlanmıştır.
+                    </div>
+                    <img src="/static/img/TSI_logo.png" class="hzm-footer-logo-right" onerror="this.style.display='none'">
+                </div>
+            </body>
+            </html>
+        `);
+        doc.close();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,476 @@
+{% extends "layout.html" %}
+{% block title %}Net Maaş Tablosu | TSİ{% endblock %}
+
+{% block content %}
+<style>
+    /* 1. STANDART YAZDIRMA (CTRL+P) AYARLARI */
+    @media print { 
+        @page { margin: 10mm; } 
+
+        nav, .sidebar, header, footer, .d-print-none, 
+        .sidebar-wrapper, .navbar, .filter-separator, #dateRangeForm, .search-container-header { 
+            display: none !important; 
+        } 
+
+        main, .content, .container-fluid, #main-wrapper { 
+            display: block !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .card { border: 1px solid #dee2e6 !important; box-shadow: none !important; margin-bottom: 10px !important; }
+        .table-responsive { overflow: visible !important; }
+        body { background-color: white !important; -webkit-print-color-adjust: exact !important; }
+    }
+
+    /* 2. EKRAN (UI) TASARIMI */
+    .card-stat { transition: transform 0.2s; border-radius: 12px; }
+    .card-stat:hover { transform: translateY(-5px); }
+    .filter-separator { border-left: 1px solid #dee2e6; height: 40px; margin: 0 15px; }
+    @media (max-width: 768px) { .filter-separator { display: none; } }
+    
+    .table tfoot tr td {
+        background-color: #151515 !important;
+        font-weight: 800;
+        border-top: 2px solid var(--hzm-accent, #0062ff) !important;
+        color: #fff !important;
+    }
+
+    .search-container-header {
+        width: 220px;
+    }
+    @media (max-width: 992px) {
+        .search-container-header { width: 100%; }
+    }
+</style>
+
+<div class="mb-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <h2 class="fw-bold mb-1 text-uppercase">MALİ RAPOR TABLOSU</h2>
+        <p class="text-secondary small fw-bold mb-0">PERSONEL HAK EDİŞ VE ÖDEME DENGESİ</p>
+    </div>
+    <div class="d-print-none d-flex flex-wrap align-items-center gap-2">
+        <div class="search-container-header">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-secondary border-end-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" id="maliSearchInput" class="form-control border-secondary border-start-0 fw-bold" placeholder="Personel Ara..." onkeyup="filterMaliTable()">
+            </div>
+        </div>
+        <button onclick="exportMaliRaporExcel()" class="btn btn-success fw-bold">
+            <i class="fas fa-file-excel me-2"></i>EXCEL'E AKTAR
+        </button>
+        <button onclick="printMaliRapor()" class="btn btn-dark fw-bold shadow-sm">
+            <i class="fas fa-print me-2"></i>YAZDIR / PDF
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4 border-0 d-print-none" style="background: var(--bg-card); border-radius: 12px;">
+    <div class="card-body p-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="small fw-bold text-primary mb-2 text-uppercase"><i class="fas fa-calendar-alt me-1"></i> Ay Bazlı Seçim</label>
+                <input type="month" id="monthPicker" class="form-control border-primary fw-bold" onchange="selectMonth(this.value)">
+            </div> 
+            <div class="col-auto d-flex align-items-center">
+                <div class="filter-separator"></div>
+                <span class="badge bg-light text-muted">VEYA</span>
+                <div class="filter-separator"></div>
+            </div>
+            <div class="col-md-7">
+                <form method="GET" action="{{ url_for('net_tablo') }}" id="dateRangeForm" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="small fw-bold text-muted mb-2 text-uppercase">Başlangıç</label>
+                        <input type="date" name="start" id="startDate" class="form-control border-secondary fw-bold" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="small fw-bold text-muted mb-2 text-uppercase">Bitiş</label>
+                        <input type="date" name="end" id="endDate" class="form-control border-secondary fw-bold" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                            <i class="fas fa-sync-alt me-2"></i>LİSTELE
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card card-stat bg-primary text-white shadow-sm border-0 text-center">
+            <div class="card-body py-4">
+                <div class="small fw-bold text-uppercase opacity-75">Toplam Brüt Hak Ediş</div>
+                <h2 class="fw-bold mb-0" id="summary-brut">0.00 ₺</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-stat bg-danger text-white shadow-sm border-0 text-center">
+            <div class="card-body py-4">
+                <div class="small fw-bold text-uppercase opacity-75">Toplam Kesinti / Avans</div>
+                <h2 class="fw-bold mb-0" id="summary-kesinti">0.00 ₺</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-stat bg-success text-white shadow-sm border-0 text-center">
+            <div class="card-body py-4">
+                <div class="small fw-bold text-uppercase opacity-75">Toplam Ödenecek Net</div>
+                <h2 class="fw-bold mb-0" id="summary-net">0.00 ₺</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+    <div class="table-responsive">
+        <table id="maliTable" class="table table-dark table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr class="text-uppercase small fw-bold text-muted">
+                    <th class="ps-4 py-3 text-start">Personel</th>
+                    <th class="text-end text-info">Geçmişten Devir</th>
+                    <th class="text-center">Toplam Gün</th>
+                    <th class="text-center text-info">Mesai Saat</th>
+                    <th class="text-center text-warning">Mesai Gün</th>
+                    <th class="text-center">G. Yevmiye</th>
+                    <th class="text-end">Brüt Tutar</th>
+                    <th class="text-end text-primary">Asgari</th>
+                    <th class="text-end text-danger">Toplam Avans</th>
+                    <th class="text-end pe-4">Kalan Net</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in hesap_list %}
+                <tr class="personel-row">
+                    <td class="fw-bold text-uppercase text-start ps-4 personel-name">{{ item.name }}</td>
+                    <td class="text-end fw-bold row-devir {% if (item.devir|default(0)) > 0 %}text-success{% elif (item.devir|default(0)) < 0 %}text-danger{% else %}text-muted{% endif %}" data-val="{{ item.devir|default(0) }}">
+                        {{ "{:,.2f}".format(item.devir|default(0)) }} ₺
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-light text-dark px-3 py-2 fw-bold">
+                            {{ "{:,.2f}".format(item.normal_gun|default(0)) }} GÜN
+                        </span>
+                    </td>
+                    <td class="text-center fw-bold text-info">
+                        {{ "{:,.1f}".format(item.mesai_saat|default(0)) }} Sa
+                    </td>
+                    <td class="text-center fw-bold text-warning">
+                        {{ "{:,.2f}".format(item.mesai_gun|default(0)) }} G
+                    </td>
+                    <td class="text-center fw-bold text-secondary">
+                        {{ "{:,.2f}".format(item.ana_yevmiye|default(0)) }} ₺
+                    </td>
+                    <td class="text-end fw-bold row-brut" data-val="{{ item.yevmiye_kazanc|default(0) }}">{{ "{:,.2f}".format(item.yevmiye_kazanc|default(0)) }} ₺</td>
+                    <td class="text-end text-primary row-asgari" data-val="{{ item.asgari_tutar|default(0) }}">- {{ "{:,.2f}".format(item.asgari_tutar|default(0)) }} ₺</td>
+                    <td class="text-end text-danger row-avans" data-val="{{ item.toplam_avans|default(0) }}">- {{ "{:,.2f}".format(item.toplam_avans|default(0)) }} ₺</td>
+                    <td class="text-end pe-4 fw-bold row-net {{ 'text-danger' if (item.net|default(0)) < 0 else 'text-success' }}" data-val="{{ item.net|default(0) }}">
+                        {{ "{:,.2f}".format(item.net|default(0)) }} ₺
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td class="ps-4 text-start">GENEL TOPLAM</td>
+                    <td class="text-end text-info" id="total-devir-sum">0.00 ₺</td>
+                    <td class="text-center" id="total-days-sum">0.00 Gün</td>
+                    <td class="text-center text-info" id="total-hours-sum">0.0 Sa</td>
+                    <td class="text-center text-warning" id="total-mgun-sum">0.00 G</td>
+                    <td></td>
+                    <td class="text-end" id="total-yevmiye-sum">0.00 ₺</td>
+                    <td class="text-end text-primary" id="total-asgari-sum">0.00 ₺</td>
+                    <td class="text-end text-danger" id="total-avans-sum">0.00 ₺</td>
+                    <td class="text-end pe-4 fs-5" id="total-net-sum">0.00 ₺</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<script>
+// Tablodaki verilerin matematiksel modellemesi (Jinja2 & JS Tam Senkronizasyon)
+var dataSet = [
+    {% for item in hesap_list %}
+    {
+        name: `{{ item.name }}`,
+        devir: {{ item.devir|default(0) }},
+        normal_gun: {{ item.normal_gun|default(0) }},
+        mesai_saat: {{ item.mesai_saat|default(0) }},
+        mesai_gun: {{ item.mesai_gun|default(0) }},
+        brut: {{ item.yevmiye_kazanc|default(0) }},
+        asgari: {{ item.asgari_tutar|default(0) }},
+        avans: {{ item.toplam_avans|default(0) }},
+        net: {{ item.net|default(0) }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+function updateCalculations(filteredData) {
+    let totalDevir = 0, totalYevmiye = 0, totalAsgari = 0, totalAvans = 0, netTotal = 0, totalDays = 0;
+    let totalHours = 0, totalMesaiGun = 0;
+
+    filteredData.forEach(item => {
+        totalDevir += item.devir;
+        totalYevmiye += item.brut;
+        totalAsgari += item.asgari;
+        totalAvans += item.avans;
+        netTotal += item.net;
+        totalDays += item.normal_gun;
+        totalHours += item.mesai_saat;
+        totalMesaiGun += item.mesai_gun;
+    });
+
+    const fmt = {minimumFractionDigits: 2, maximumFractionDigits: 2};
+    
+    document.getElementById('summary-brut').innerText = totalYevmiye.toLocaleString('tr-TR', fmt) + " ₺";
+    document.getElementById('summary-kesinti').innerText = (totalAsgari + totalAvans).toLocaleString('tr-TR', fmt) + " ₺";
+    document.getElementById('summary-net').innerText = netTotal.toLocaleString('tr-TR', fmt) + " ₺";
+    
+    document.getElementById('total-devir-sum').innerText = totalDevir.toLocaleString('tr-TR', fmt) + " ₺";
+    document.getElementById('total-days-sum').innerText = totalDays.toFixed(2) + " GÜN";
+    document.getElementById('total-hours-sum').innerText = totalHours.toFixed(1) + " Sa";
+    document.getElementById('total-mgun-sum').innerText = totalMesaiGun.toFixed(2) + " G";
+    
+    document.getElementById('total-yevmiye-sum').innerText = totalYevmiye.toLocaleString('tr-TR', fmt) + " ₺";
+    document.getElementById('total-asgari-sum').innerText = "- " + totalAsgari.toLocaleString('tr-TR', fmt) + " ₺";
+    document.getElementById('total-avans-sum').innerText = "- " + totalAvans.toLocaleString('tr-TR', fmt) + " ₺";
+    
+    const netSumEl = document.getElementById('total-net-sum');
+    netSumEl.innerText = netTotal.toLocaleString('tr-TR', fmt) + " ₺";
+    
+    netSumEl.classList.remove('text-success', 'text-danger');
+    netSumEl.classList.add(netTotal < 0 ? 'text-danger' : 'text-success');
+}
+
+function filterMaliTable() {
+    const input = document.getElementById('maliSearchInput');
+    const filter = input.value.toUpperCase();
+    const rows = document.querySelectorAll('.personel-row');
+    
+    let filteredData = [];
+
+    rows.forEach((row, index) => {
+        const nameTd = row.querySelector('.personel-name');
+        if (nameTd) {
+            const txtValue = nameTd.textContent || nameTd.innerText;
+            if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                row.style.display = "";
+                filteredData.push(dataSet[index]);
+            } else {
+                row.style.display = "none";
+            }
+        }
+    });
+
+    updateCalculations(filteredData);
+}
+
+function exportMaliRaporExcel() {
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+    let url = "{{ url_for('export_excel') }}";
+    if (start && end) { url += `?start=${start}&end=${end}`; }
+    window.location.href = url;
+}
+
+function selectMonth(monthValue) {
+    if (!monthValue) return;
+    const [year, month] = monthValue.split('-');
+    const firstDay = `${year}-${month}-01`;
+    const lastDayDate = new Date(year, month, 0);
+    const lastDay = `${year}-${month}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+    document.getElementById('startDate').value = firstDay;
+    document.getElementById('endDate').value = lastDay;
+    
+    // UI filtresi yerine formu doğrudan backend rotasına submit ediyoruz
+    document.getElementById('dateRangeForm').submit();
+}
+
+window.onload = function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const startVal = urlParams.get('start') || document.getElementById('startDate').value;
+    if(startVal && startVal.includes('-')) {
+        const parts = startVal.split('-');
+        document.getElementById('monthPicker').value = parts[0] + '-' + parts[1];
+    }
+    updateCalculations(dataSet);
+};
+
+function printMaliRapor() {
+    const startInput = document.getElementById('startDate').value;
+    const endInput = document.getElementById('endDate').value;
+    const start = startInput ? startInput.split('-').reverse().join('.') : '';
+    const end = endInput ? endInput.split('-').reverse().join('.') : '';
+    
+    const summaryBrut = document.getElementById('summary-brut').innerText;
+    const summaryKesinti = document.getElementById('summary-kesinti').innerText;
+    const summaryNet = document.getElementById('summary-net').innerText;
+
+    let rowsHtml = "";
+    let tDevir = 0, tNormalGun = 0, tMesaiSaat = 0, tMesaiGun = 0, tBrut = 0, tAsgari = 0, tAvans = 0, tNet = 0;
+
+    document.querySelectorAll('.personel-row').forEach(row => {
+        if (row.style.display !== "none") {
+            const name = row.querySelector('.personel-name').innerText;
+            const devir = parseFloat(row.querySelector('.row-devir').getAttribute('data-val')) || 0;
+            const brut = parseFloat(row.querySelector('.row-brut').getAttribute('data-val')) || 0;
+            const asgari = parseFloat(row.querySelector('.row-asgari').getAttribute('data-val')) || 0;
+            const avans = parseFloat(row.querySelector('.row-avans').getAttribute('data-val')) || 0;
+            const net = parseFloat(row.querySelector('.row-net').getAttribute('data-val')) || 0;
+            
+            const cells = row.querySelectorAll('td');
+            const nGun = parseFloat(cells[2].innerText.replace(/[^0-9,.]/g, '').replace(',', '.')) || 0;
+            const mSaat = parseFloat(cells[3].innerText.replace(/[^0-9,.]/g, '').replace(',', '.')) || 0;
+            const mGun = parseFloat(cells[4].innerText.replace(/[^0-9,.]/g, '').replace(',', '.')) || 0;
+            const yevmiye = parseFloat(cells[5].innerText.replace(/[^0-9,.]/g, '').replace(',', '.')) || 0;
+
+            tDevir += devir; tNormalGun += nGun; tMesaiSaat += mSaat; tMesaiGun += mGun;
+            tBrut += brut; tAsgari += asgari; tAvans += avans; tNet += net;
+
+            rowsHtml += `
+                <tr>
+                    <td style="text-align: left !important; padding-left: 15px !important; font-weight: bold; text-transform: uppercase;">${name}</td>
+                    <td style="text-align: right !important; color: ${devir >= 0 ? (devir > 0 ? '#28a745' : '#000') : '#dc3545'}; font-weight: bold;">₺${devir.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                    <td>${nGun.toFixed(2)} G</td>
+                    <td style="color: #0288d1 !important; font-weight: bold;">${mSaat.toFixed(1)} Sa</td>
+                    <td style="color: #f57c00 !important; font-weight: bold;">${mGun.toFixed(2)} G</td>
+                    <td>₺${yevmiye.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align: right !important;">₺${brut.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align: right !important; color: #0062ff;">₺${asgari.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align: right !important; color: #dc3545;">₺${avans.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                    <td style="text-align: right !important; padding-right: 15px !important; font-weight: bold; color: ${net >= 0 ? '#28a745' : '#dc3545'};">₺${net.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                </tr>
+            `;
+        }
+    });
+
+    const oldFrame = document.getElementById('hzm-print-frame');
+    if (oldFrame) oldFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'hzm-print-frame';
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px'; iframe.style.height = '0px'; iframe.style.border = 'none';
+    
+    iframe.onload = function() {
+        setTimeout(() => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        }, 300);
+    };
+    
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+        <html>
+        <head>
+            <title>TSİ Mali Rapor Çıktısı</title>
+            <style>
+                html, body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; color: #000; height: 100%; }
+                body { padding: 40px 30px; box-sizing: border-box; display: flex; flex-direction: column; }
+                .hzm-main-content { flex: 1 0 auto; }
+                
+                .header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
+                .header h2 { margin: 0; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 800; }
+                .header p { margin: 5px 0 0 0; font-size: 12px; font-weight: bold; color: #333; }
+                
+                .summary-container { display: flex; gap: 10px; margin-bottom: 20px; }
+                .sum-card { flex: 1; border: 1px solid #000; padding: 10px; text-align: center; background: #f8f9fa; }
+                .sum-card b { font-size: 9px; text-transform: uppercase; display: block; margin-bottom: 4px; opacity: 0.8; }
+                .sum-card span { font-size: 16px; font-weight: bold; }
+                
+                table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; margin-bottom: 30px; }
+                th, td { border: 1px solid #000; padding: 8px 5px; text-align: center; vertical-align: middle; }
+                th { background: #f1f5f9 !important; text-transform: uppercase; font-weight: bold; font-size: 10px; }
+                
+                .sig { margin-top: 40px; margin-bottom: 50px; display: flex; justify-content: space-between; padding: 0 40px; font-size: 12px; page-break-inside: avoid; break-inside: avoid; }
+                .sig div { width: 180px; text-align: center; font-weight: bold; }
+                
+                .hzm-final-footer-container { 
+                    flex-shrink: 0; margin-top: auto; page-break-inside: avoid; break-inside: avoid;
+                    border-top: 1px solid #000; padding-top: 15px; padding-bottom: 5px;
+                    display: flex; justify-content: space-between; align-items: center;
+                }
+                .hzm-footer-logo-left { height: 32px; width: auto; }
+                .hzm-footer-logo-right { height: 42px; width: auto; }
+                .hzm-footer-text { font-size: 9px; color: #000 !important; text-align: center; max-width: 65%; }
+                .hzm-highlight { font-weight: bold; }
+                
+                @media print { 
+                    .hzm-final-footer-container { position: absolute; bottom: 10px; width: 100%; left: 0; }
+                    @page { size: auto; margin: 15mm 10mm 20mm 10mm; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="hzm-main-content">
+                <div class="header">
+                    <h2>TSİ SYSTEM - MALİ RAPOR TABLOSU</h2>
+                    <p>RAPOR ARALIĞI: ${start} - ${end}</p>
+                </div>
+                
+                <div class="summary-container">
+                    <div class="sum-card"><b>TOPLAM BRÜT HAK EDİŞ</b><span>${summaryBrut}</span></div>
+                    <div class="sum-card"><b>TOPLAM KESİNTİ / AVANS</b><span>${summaryKesinti}</span></div>
+                    <div class="sum-card"><b>DEVİRLİ ÖDENECEK NET TOPLAM</b><span>${summaryNet}</span></div>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding-left: 15px;">Personel</th>
+                            <th style="text-align: right; padding-right: 10px;">Geçmişten Devir</th>
+                            <th>Toplam Gün</th>
+                            <th style="color: #0288d1;">Mesai Saat</th>
+                            <th style="color: #f57c00;">Mesai Gün</th>
+                            <th>G.Yevmiye</th>
+                            <th style="text-align: right;">Brüt</th>
+                            <th style="text-align: right;">Asgari</th>
+                            <th style="text-align: right;">Avans</th>
+                            <th style="text-align: right; padding-right: 15px;">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                        <tr style="background: #f8f9fa !important; font-weight: bold; border-top: 2px solid #000;">
+                            <td style="text-align: left !important; padding-left: 15px !important;">GENEL TOPLAM</td>
+                            <td style="text-align: right !important; color: ${tDevir >= 0 ? '#000' : '#dc3545'}">₺${tDevir.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            <td>${tNormalGun.toFixed(2)} G</td>
+                            <td style="color: #0288d1;">${tMesaiSaat.toFixed(1)} Sa</td>
+                            <td style="color: #f57c00;">${tMesaiGun.toFixed(2)} G</td>
+                            <td></td>
+                            <td style="text-align: right !important;">₺${tBrut.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            <td style="text-align: right !important; color: #0062ff;">₺${tAsgari.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            <td style="text-align: right !important; color: #dc3545;">₺${tAvans.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                            <td style="text-align: right !important; padding-right: 15px !important; font-size: 12px; color: ${tNet >= 0 ? '#28a745' : '#dc3545'}">₺${tNet.toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="sig">
+                    <div><b>Teslim Eden</b><br><br><br><br>__________</div>
+                    <div><b>Onaylayan</b><br><br><br><br>__________</div>
+                </div>
+            </div>
+            
+            <div class="hzm-final-footer-container">
+                <img src="/static/img/logo.png" class="hzm-footer-logo-left" onerror="this.style.display='none'">
+                <div class="hzm-footer-text">
+                    Bu Belge <span class="hzm-highlight">HZM SOFTWARE & DESIGN SERVICES</span> Tarafından Geliştirilen 
+                    <span class="hzm-highlight">TSI: Technical Statistics & Integration</span> Sistemi İle Hazırlanmıştır.
+                </div>
+                <img src="/static/img/TSI_logo.png" class="hzm-footer-logo-right" onerror="this.style.display='none'">
+            </div>
+        </body>
+        </html>
+    `);
+    doc.close();
+}
+</script>
+{% endblock %}

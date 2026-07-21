@@ -1,0 +1,537 @@
+{% extends "layout.html" %}
+{% block title %}Puantaj Kayıt Sistemi{% endblock %}
+
+{% block content %}
+<style>
+    /* HZM CORE DESIGN */
+    :root {
+        --hzm-accent: #0062ff;
+        --hzm-dark: #0d0d0d;
+        --hzm-border: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Tablo ve Hücre Tasarımı */
+    .day-cell {
+        width: 38px; height: 38px; 
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 4px; font-weight: 800; cursor: pointer; user-select: none;
+        transition: 0.2s all ease; font-size: 0.85rem; 
+        border: 1px solid var(--hzm-border); margin: auto;
+        background: rgba(255, 255, 255, 0.03); color: rgba(255, 255, 255, 0.3);
+    }
+    .day-cell:hover { border-color: var(--hzm-accent); background: rgba(0, 98, 255, 0.1); transform: scale(1.1); color: white; }
+    
+    .full { background: #0062ff !important; color: #fff !important; box-shadow: 0 0 12px rgba(0, 98, 255, 0.4); } 
+    .half { background: #00bfff !important; color: #fff !important; } 
+    .over-1 { background: #0049a8 !important; color: #fff !important; } 
+    .over-2 { background: #0028ac !important; color: #fff !important; } 
+    .over-3 { background: #040035 !important; color: #fff !important; border: 1px solid #fff; } 
+    .off { background: rgba(0, 0, 0, 0.6) !important; color: transparent !important; }
+
+    /* Seçili Satır Vurgusu */
+    .row-selected { background: rgba(0, 98, 255, 0.05) !important; }
+    .row-checkbox { cursor: pointer; width: 18px; height: 18px; accent-color: var(--hzm-accent); }
+
+    .table-wrapper { background: var(--hzm-dark); border: 1px solid #222; border-radius: 8px; overflow-x: auto; max-height: 55vh; position: relative; }
+    .table thead th { background: #151515 !important; color: white !important; border-bottom: 2px solid var(--hzm-accent) !important; padding: 12px 5px !important; position: sticky; top: 0; z-index: 20; }
+    .table tfoot td { background: #151515 !important; color: white !important; border-top: 2px solid var(--hzm-accent) !important; padding: 10px 5px !important; position: sticky; bottom: 0; z-index: 20; font-weight: bold; }
+    
+    .sticky-col { position: sticky; left: 0; background: #0c0c0c !important; z-index: 21; border-right: 2px solid var(--hzm-border) !important; min-width: 200px; }
+    .check-col { position: sticky; left: 0; z-index: 22; background: #0c0c0c !important; width: 40px; border-right: 1px solid #222; }
+
+    /* DROPDOWN */
+    .hzm-dropdown { position: relative; width: 100%; }
+    .hzm-dropdown-btn {
+        width: 100%; padding: 8px 12px; background: #1a1a1a; border: 1px solid #333;
+        color: white; border-radius: 5px; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    }
+    .hzm-dropdown-content {
+        display: none; position: absolute; top: 100%; left: 0; width: 100%;
+        background: #151515; border: 1px solid #333; z-index: 1000;
+        max-height: 300px; overflow-y: auto; border-radius: 0 0 8px 8px;
+    }
+    .hzm-dropdown-content.show { display: block; }
+    .hzm-option { padding: 10px; color: #ccc; cursor: pointer; border-bottom: 1px solid #222; }
+    .hzm-option:hover { background: #222; color: white; }
+    .hzm-option.selected { background: var(--hzm-accent); color: white; }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">GÜNLÜK PUANTAJ</h2>
+        <p class="text-muted small mb-0">HZM Operasyonel Takip Sistemi</p>
+    </div>
+    <div class="text-end">
+        <span class="badge bg-dark border border-secondary p-2 px-3">TSI CORE V4.0</span>
+    </div>
+</div>
+
+<div class="tsi-card mb-4" style="background: #111; padding: 20px; border-radius: 10px; border: 1px solid #222;">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-2">
+            <label class="small text-muted fw-bold mb-2">HESAP DÖNEMİ</label>
+            <input type="month" id="monthPicker" class="form-control bg-dark text-white border-secondary" value="{{ month }}">
+        </div>
+        <div class="col-md-2">
+            <label class="small text-muted fw-bold mb-2">GÜN SEÇİMİ</label>
+            <div class="hzm-dropdown">
+                <div class="hzm-dropdown-btn" onclick="toggleDropdown()">
+                    <span id="selectedDaysLabel">GÜN SEÇİNİZ</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div id="hzmDropdownContent" class="hzm-dropdown-content">
+                    <div class="hzm-option" id="btnToggleAllDays" onclick="toggleAllDays(this)">TÜM AY</div>
+                    <div id="daysList"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <label class="small text-muted fw-bold mb-2">TOPLU DEĞER</label>
+            <select id="bulkValue" class="form-select bg-dark text-white border-secondary">
+                <option value="1">1 (Tam)</option>
+                <option value="0.5">0,5 (Yarım)</option>
+                <option value="1.5">1,5</option>
+                <option value="2">2 (Mesai)</option>
+                <option value="3">3 (Full)</option>
+                <option value="0">0 (Yok)</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="small text-muted fw-bold mb-2">HIZLI PERSONEL EKLE</label>
+            <div class="input-group">
+                <select id="employeeSelect" class="form-select bg-dark text-white border-secondary">
+                    <option value="">Seçiniz...</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp['id'] }}">{{ emp['name'] }}</option>
+                    {% endfor %}
+                </select>
+                <button class="btn btn-outline-primary border-secondary" onclick="addEmployee()" title="Seçili Personeli Ekle">
+                    <i class="fas fa-user-plus"></i>
+                </button>
+                <button class="btn btn-outline-primary border-secondary" onclick="addAllEmployees()" title="Tüm Personelleri Ekle">
+                    <i class="fas fa-users"></i>
+                </button>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <button class="btn btn-primary w-100 fw-bold shadow-sm" onclick="applyBulkValue()">
+                <i class="fas fa-check-double me-2"></i> SEÇİLİ PERSONELE UYGULA
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="table-wrapper mb-4">
+    <table class="table table-dark table-hover text-center align-middle mb-0">
+        <thead>
+            <tr id="headerRow">
+                <th class="check-col"><input type="checkbox" id="selectAllRows" onclick="toggleAllRowChecks(this)"></th>
+                <th class="sticky-col text-start ps-4">PERSONEL ADI</th>
+            </tr>
+        </thead>
+        <tbody id="gridBody"></tbody>
+        <tfoot>
+            <tr id="footerRow">
+                <td class="check-col"></td>
+                <td class="sticky-col text-start ps-4" style="color: var(--hzm-accent);">GÜNLÜK TOPLAM</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<div class="tsi-card p-4 mb-4" style="background: #111; border-radius: 10px; border: 1px solid #222;">
+    <h5 class="fw-bold mb-3 text-uppercase text-info" style="letter-spacing: 1px;"><i class="fa fa-clock me-2"></i>AYLIK TOPLAM MESAİ SAATLERİ</h5>
+    <div class="table-responsive" style="max-height: 40vh; overflow-y: auto;">
+        <table class="table table-dark table-bordered table-striped align-middle mb-0 text-center">
+            <thead>
+                <tr class="bg-dark">
+                    <th style="width: 50%; text-align: left;" class="ps-4">PERSONEL ADI</th>
+                    <th style="width: 25%;">TOPLAM MESAİ SAATİ</th>
+                    <th style="width: 25%; color: var(--hzm-accent);">GÜN KARŞILIĞI (SAAT / 8)</th>
+                </tr>
+            </thead>
+            <tbody id="mesaiTableBody">
+                {% for emp in employees %}
+                <tr data-mesai-emp-id="{{ emp['id'] }}">
+                    <td class="fw-bold text-uppercase text-start ps-4">{{ emp['name'] }}</td>
+                    <td>
+                        <input type="number" 
+                               step="0.5" 
+                               min="0"
+                               class="form-control bg-dark text-white text-center fw-bold mx-auto mesai-input" 
+                               style="width: 120px; border: 1px solid #333;"
+                               data-emp-id="{{ emp['id'] }}" 
+                               value="0" 
+                               placeholder="0"
+                               onchange="calculateTotals()">
+                    </td>
+                    <td id="mesai-day-target-{{ emp['id'] }}" class="fw-bold text-info">-</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-4 d-flex justify-content-between">
+    <button class="btn btn-outline-danger px-4 fw-bold" onclick="window.location.href='/'">İPTAL</button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-success px-4 fw-bold" onclick="exportPuantajExcel()"><i class="fas fa-file-excel me-2"></i>EXCEL</button>
+        <button class="btn btn-dark border-secondary px-4 fw-bold" id="btnSaveOnly" onclick="saveOnly()">ARA KAYIT</button>
+        <button class="btn btn-primary px-5 fw-bold" id="btnSaveExit" onclick="saveAndExit()">ONAYLA VE ÇIK</button>
+    </div>
+</div>
+
+<div id="hzm_notification" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 280px; animation: slideIn 0.3s ease-out;">
+    <div id="hzm_notif_box" style="background: #0d0d0d; border-left: 5px solid #0062ff; color: white; padding: 15px 20px; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 15px;">
+        <div id="hzm_notif_icon" style="color: #0062ff; font-size: 1.5rem;"><i class="fas fa-spinner fa-spin"></i></div>
+        <div>
+            <div id="hzm_notif_title" style="font-weight: bold; font-size: 0.9rem; text-transform: uppercase;">MÜHÜRLENİYOR...</div>
+            <div id="hzm_notif_desc" style="font-size: 0.8rem; opacity: 0.8;">Veriler sisteme işleniyor.</div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
+<script>
+let daysInMonth = 0;
+
+function toggleDropdown() { document.getElementById("hzmDropdownContent").classList.toggle("show"); }
+
+function toggleDay(el) { el.classList.toggle("selected"); updateLabel(); }
+
+function toggleAllDays(el) {
+    let isSelected = el.classList.toggle("selected");
+    document.querySelectorAll(".day-opt").forEach(opt => {
+        if(isSelected) opt.classList.add("selected");
+        else opt.classList.remove("selected");
+    });
+    updateLabel();
+}
+
+function updateLabel() {
+    let selected = document.querySelectorAll(".day-opt.selected");
+    let label = document.getElementById("selectedDaysLabel");
+    label.innerText = selected.length === 0 ? "GÜN SEÇİNİZ" : selected.length + " GÜN SEÇİLDİ";
+}
+
+function toggleAllRowChecks(master) {
+    document.querySelectorAll(".row-checkbox").forEach(cb => cb.checked = master.checked);
+}
+
+function createHeader(month){
+    const date = new Date(month + "-01");
+    daysInMonth = new Date(date.getFullYear(), date.getMonth()+1, 0).getDate();
+    
+    let header = document.getElementById("headerRow");
+    let footer = document.getElementById("footerRow");
+    let daysList = document.getElementById("daysList");
+    
+    header.innerHTML = '<th class="check-col"><input type="checkbox" id="selectAllRows" onclick="toggleAllRowChecks(this)"></th><th class="sticky-col text-start ps-4">PERSONEL ADI</th>';
+    footer.innerHTML = '<td class="check-col"></td><td class="sticky-col text-start ps-4" style="color: var(--hzm-accent) !important;">GÜNLÜK TOPLAM</td>';
+    daysList.innerHTML = '';
+    
+    for(let i=1; i<=daysInMonth; i++) {
+        header.innerHTML += `<th>${i}</th>`;
+        footer.innerHTML += `<td id="daily-total-${i-1}">0</td>`;
+        daysList.innerHTML += `<div class="hzm-option day-opt" data-value="${i}" onclick="toggleDay(this)">${i}. GÜN</div>`;
+    }
+
+    header.innerHTML += '<th class="total-cell">TOPLAM GÜN</th>';
+    footer.innerHTML += '<td id="grandTotalCell" class="total-cell grand-total">0</td>';
+}
+
+function applyBulkValue() {
+    let val = parseFloat(document.getElementById("bulkValue").value);
+    let selectedDays = Array.from(document.querySelectorAll(".day-opt.selected")).map(el => el.getAttribute("data-value"));
+    let selectedRows = document.querySelectorAll(".row-checkbox:checked");
+
+    if(selectedRows.length === 0 || selectedDays.length === 0) {
+        Swal.fire({ icon: 'warning', title: 'HZM UYARI', text: 'Lütfen hem personel hem de gün seçin!', background: '#111', color: '#fff' });
+        return;
+    }
+
+    selectedRows.forEach(cb => {
+        let row = cb.closest("tr");
+        row.querySelectorAll(".day-cell").forEach(cell => {
+            if(selectedDays.includes(cell.dataset.day)) {
+                cell.dataset.value = val;
+                updateCellAppearance(cell, val);
+            }
+        });
+    });
+
+    calculateTotals();
+    
+    // SIFIRLAMA MOTORU: Gün seçimlerini, satır kutucuklarını ve 'Tüm Ay' butonunu temizle
+    document.querySelectorAll(".day-opt, #btnToggleAllDays").forEach(el => el.classList.remove("selected"));
+    document.querySelectorAll(".row-checkbox, #selectAllRows").forEach(cb => cb.checked = false);
+    
+    // Etiketi varsayılan "GÜN SEÇİNİZ" durumuna getir
+    updateLabel();
+    
+    // Dropdown menüyü kapat
+    document.getElementById("hzmDropdownContent").classList.remove("show");
+}
+
+function renderRow(empId, empName, data){
+    let row = document.createElement("tr");
+    row.setAttribute("data-id", empId);
+    row.innerHTML = `<td class="check-col"><input type="checkbox" class="row-checkbox"></td><td class="sticky-col text-start ps-4">${empName}</td>`;
+    
+    for(let i=1; i<=daysInMonth; i++){
+        let dateKey = `${document.getElementById("monthPicker").value}-${String(i).padStart(2,'0')}`;
+        let val = (data.data && data.data[dateKey]) ? parseFloat(data.data[dateKey]) : 0;
+        
+        let cell = document.createElement("td");
+        let div = document.createElement("div");
+        div.className = "day-cell";
+        div.dataset.value = val;
+        div.dataset.day = i;
+        div.onclick = function() { toggleCell(this); };
+        updateCellAppearance(div, val);
+        cell.appendChild(div);
+        row.appendChild(cell);
+    }
+
+    let total = document.createElement("td");
+    total.className = "total-cell fw-bold";
+    row.appendChild(total);
+    document.getElementById("gridBody").appendChild(row);
+    
+    if (data.extra) {
+        let mesaiInput = document.querySelector(`.mesai-input[data-emp-id="${empId}"]`);
+        if (mesaiInput) mesaiInput.value = data.extra;
+    }
+    
+    calculateTotals();
+}
+
+function calculateTotals() {
+    let dailyTotals = new Array(daysInMonth).fill(0);
+    let grandTotal = 0;
+
+    document.querySelectorAll(".mesai-input").forEach(input => {
+        let empId = input.getAttribute("data-emp-id");
+        let extraHours = parseFloat(input.value) || 0;
+        let dayEquivalent = extraHours / 8;
+        
+        let dayCellTarget = document.getElementById(`mesai-day-target-${empId}`);
+        if(dayCellTarget) {
+            dayCellTarget.textContent = dayEquivalent > 0 ? dayEquivalent.toFixed(2).replace(".", ",") + " Gün" : "-";
+        }
+    });
+
+    document.querySelectorAll("#gridBody tr").forEach(row => {
+        let pTotal = 0;
+        let empId = row.getAttribute("data-id");
+        
+        row.querySelectorAll(".day-cell").forEach((c, i) => {
+            let v = parseFloat(c.dataset.value) || 0;
+            pTotal += v;
+            dailyTotals[i] += v;
+        });
+
+        let mesaiInput = document.querySelector(`.mesai-input[data-emp-id="${empId}"]`);
+        let extra = mesaiInput ? parseFloat(mesaiInput.value) || 0 : 0;
+        let finalRowTotal = pTotal;
+        
+        row.querySelector(".total-cell").textContent = finalRowTotal.toFixed(2).replace(".", ",") + " Gün";
+        grandTotal += finalRowTotal;
+    });
+
+    dailyTotals.forEach((v, i) => {
+        let el = document.getElementById(`daily-total-${i}`);
+        if(el) el.textContent = v > 0 ? v.toFixed(1).replace(".", ",") : "-";
+    });
+    
+    document.getElementById("grandTotalCell").textContent = grandTotal.toFixed(2).replace(".", ",") + " Gün";
+}
+
+function collectData() {
+    let data = {};
+    const currentMonth = document.getElementById("monthPicker").value;
+    
+    document.querySelectorAll("#gridBody tr").forEach(tr => {
+        let empId = tr.getAttribute("data-id");
+        if (!empId) return;
+
+        data[empId] = {};
+        
+        tr.querySelectorAll(".day-cell").forEach(cell => {
+            let day = cell.getAttribute("data-day");
+            let workValue = parseFloat(cell.getAttribute("data-value")) || 0;
+            
+            data[empId][day] = {
+                "work": workValue,
+                "extra": 0,
+                "advance": 0
+            };
+        });
+    });
+
+    document.querySelectorAll(".mesai-input").forEach(input => {
+        let empId = input.getAttribute("data-emp-id");
+        let extraValue = parseFloat(input.value) || 0;
+        
+        if (!data[empId]) {
+            data[empId] = {};
+        }
+        
+        if (!data[empId]["1"]) {
+            data[empId]["1"] = { "work": 0, "extra": extraValue, "advance": 0 };
+        } else {
+            data[empId]["1"]["extra"] = extraValue;
+        }
+    });
+    
+    return {
+        "month": currentMonth,
+        "puantaj": data
+    };
+}
+
+function updateCellAppearance(cell, val) {
+    cell.className = "day-cell";
+    if (val === 0) { cell.classList.add("off"); cell.textContent = ""; }
+    else {
+        let cls = val === 0.5 ? "half" : val === 1 ? "full" : val === 1.5 ? "over-1" : val === 2 ? "over-2" : "over-3";
+        cell.classList.add(cls);
+        cell.textContent = val.toString().replace(".", ",");
+    }
+}
+
+function toggleCell(cell) {
+    let vals = [0, 0.5, 1, 1.5, 2, 3];
+    let current = parseFloat(cell.dataset.value);
+    let next = vals[(vals.indexOf(current) + 1) % vals.length];
+    cell.dataset.value = next;
+    updateCellAppearance(cell, next);
+    calculateTotals();
+}
+
+function addEmployee(){
+    let select = document.getElementById("employeeSelect");
+    if(!select.value || document.querySelector(`tr[data-id='${select.value}']`)) return;
+    renderRow(select.value, select.options[select.selectedIndex].text, {});
+}
+
+function addAllEmployees() {
+    let select = document.getElementById("employeeSelect");
+    for (let i = 1; i < select.options.length; i++) {
+        if (!document.querySelector(`tr[data-id='${select.options[i].value}']`)) {
+            renderRow(select.options[i].value, select.options[i].text, {});
+        }
+    }
+}
+
+async function saveOnly() {
+    showHzmNotify("loading", "SİSTEM MÜHÜRLENİYOR...", "Veriler TSİ veritabanına işleniyor.");
+    try {
+        const payload = collectData();
+        const response = await fetch("/save_puantaj", { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify(payload) 
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+            showHzmNotify("success", "İŞLEM BAŞARILI", "Veriler başarıyla mühürlendi.");
+        } else {
+            showHzmNotify("error", "KAYIT BAŞARISIZ", result.error || "Bilinmeyen Hata");
+        }
+    } catch (err) {
+        console.error(err);
+        showHzmNotify("error", "SİSTEM HATASI", "Veritabanı bağlantısı kurulamadı veya sunucu yanıt vermiyor.");
+    }
+}
+
+async function saveAndExit(){
+    showHzmNotify("loading", "ONAYLANIYOR...", "Veriler mühürlenip listeye aktarılıyor.");
+    try {
+        const payload = collectData();
+        const response = await fetch("/save_puantaj", { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify(payload) 
+        });
+        
+        const result = await response.json();
+        if (response.ok && result.success) {
+            showHzmNotify("success", "MÜHÜRLENDİ", "Yönlendiriliyorsunuz...");
+            setTimeout(() => {
+                window.location.href = "/net-tablo";
+            }, 1200);
+        } else {
+            showHzmNotify("error", "ONAYLAMA BAŞARISIZ", result.error || "Bilinmeyen Hata");
+        }
+    } catch (err) {
+        console.error(err);
+        showHzmNotify("error", "SİSTEM HATASI", "Veri kaydedilirken kritik hata.");
+    }
+}
+
+function exportPuantajExcel() {
+    const month = document.getElementById("monthPicker").value;
+    window.location.href = `/export-puantaj-excel/${month}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    let month = document.getElementById("monthPicker").value;
+    if(month) createHeader(month);
+    
+    let attendanceData = {{ attendance|tojson | safe }};
+    let select = document.getElementById("employeeSelect");
+    
+    for(let i = 1; i < select.options.length; i++) {
+        let empId = select.options[i].value;
+        let empName = select.options[i].text;
+        
+        if(attendanceData && attendanceData[empId]) {
+            renderRow(empId, empName, attendanceData[empId]);
+        }
+    }
+    calculateTotals();
+});
+
+document.getElementById("monthPicker").addEventListener("change", function(){
+    window.location.href = "/puantaj?month=" + this.value;
+});
+
+function showHzmNotify(type, title, desc) {
+    const notify = document.getElementById('hzm_notification');
+    const box = document.getElementById('hzm_notif_box');
+    const icon = document.getElementById('hzm_notif_icon');
+    const tEl = document.getElementById('hzm_notif_title');
+    const dEl = document.getElementById('hzm_notif_desc');
+    
+    tEl.innerText = title;
+    dEl.innerText = desc;
+    
+    if (type === "loading") {
+        box.style.borderLeftColor = "#0062ff";
+        icon.style.color = "#0062ff";
+        icon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        notify.style.display = 'block';
+    } else if (type === "success") {
+        box.style.borderLeftColor = "#28a745";
+        icon.style.color = "#28a745";
+        icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+        notify.style.display = 'block';
+        setTimeout(() => { notify.style.display = 'none'; }, 2500);
+    } else if (type === "error") {
+        box.style.borderLeftColor = "#dc3545";
+        icon.style.color = "#dc3545";
+        icon.innerHTML = '<i class="fas fa-times-circle"></i>';
+        notify.style.display = 'block';
+        setTimeout(() => { notify.style.display = 'none'; }, 4000);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,472 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/all.min.css') }}" rel="stylesheet">
+
+<style>
+    /* --- HZM ENDÜSTRİYEL MİNİMALİZM TEMA --- */
+    :root {
+        --hzm-black: #000000;
+        --hzm-dark-grey: #0a0a0a;
+        --hzm-border: #222222;
+        --hzm-text: #d1d1d1;
+        --hzm-accent: #0dcaf0; 
+    }
+
+    [data-theme="dark"] .hzm-panel, [data-theme="dark"] .modal-content {
+        background-color: var(--hzm-black) !important;
+        border: 1px solid var(--hzm-border) !important;
+        color: var(--hzm-text) !important;
+    }
+
+    [data-theme="dark"] .modal-header { 
+        background: var(--hzm-dark-grey) !important; 
+        border-bottom: 1px solid var(--hzm-border); 
+    }
+
+    [data-theme="dark"] .form-control { 
+        background: #050505 !important; 
+        color: white !important; 
+        border: 1px solid #333 !important; 
+        border-radius: 2px;
+        font-size: 0.9rem;
+    }
+
+    .hzm-table { width: 100%; margin-bottom: 0; vertical-align: middle; }
+    .hzm-table th { 
+        padding: 15px; 
+        text-transform: uppercase; 
+        font-size: 0.7rem; 
+        letter-spacing: 2px; 
+        color: #555;
+        border-bottom: 2px solid var(--hzm-border);
+    }
+    .hzm-table td { padding: 12px 15px; border-bottom: 1px solid #111; }
+    .emp-row:hover { background: #080808; cursor: pointer; }
+
+    .history-scroll { 
+        max-height: 400px; 
+        overflow-y: auto; 
+        background: #050505; 
+        border: 1px solid #111;
+    }
+
+    #hzm-context-menu {
+        display: none; position: fixed; z-index: 10000; min-width: 220px;
+        background: #0a0a0a; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+    }
+    .cm-item {
+        padding: 12px 18px; color: #888; cursor: pointer; display: flex; 
+        align-items: center; transition: 0.2s; font-size: 12px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+    .cm-item:hover { background: #1a1a1a; color: #fff; }
+    .cm-item i { width: 20px; margin-right: 10px; font-size: 14px; }
+</style>
+
+<div id="hzm-context-menu">
+    <div class="cm-item" id="cm-detay-btn" onclick="openFullPanel(currentEmpId)"><i class="fas fa-terminal text-info"></i> DOSYA AYRINTILARI</div>
+    <div class="cm-item text-danger" id="cm-sil-btn"><i class="fas fa-user-slash"></i> KAYDI SİSTEMDEN SİL</div>
+</div>
+
+<div class="container-fluid mt-3" data-theme="dark">
+    <div class="card hzm-panel mb-4 shadow-sm">
+        <div class="card-body">
+            <h6 class="fw-bold mb-3 border-bottom pb-2 text-uppercase opacity-75">
+                <i class="fas fa-plus-circle me-2"></i>Sistem Girişi: Personel Tanımla
+            </h6>
+            <form method="POST" class="row g-3">
+                <div class="col-md-3"><label class="small fw-bold opacity-50">AD SOYAD</label><input type="text" name="name" class="form-control" required></div>
+                <div class="col-md-2"><label class="small fw-bold opacity-50">TC NO</label><input type="text" name="tc_no" class="form-control" maxlength="11"></div>
+                <div class="col-md-2"><label class="small fw-bold opacity-50">İLETİŞİM</label><input type="text" name="phone" class="form-control"></div>
+                <div class="col-md-2"><label class="small fw-bold opacity-50">BAŞLANGIÇ YEVMİYESİ (₺)</label><input type="number" step="0.01" name="daily_wage" class="form-control" required></div>
+                <div class="col-md-2"><label class="small fw-bold opacity-50">GİRİŞ TARİHİ</label><input type="date" name="entry_date" class="form-control" value="{{ now[:10] if now else '' }}"></div>
+                <div class="col-md-1 d-flex align-items-end"><button type="submit" class="btn btn-outline-light w-100 fw-bold">KAYDET</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card hzm-panel shadow-sm">
+        <div class="table-responsive">
+            <table class="hzm-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">#</th> 
+                        <th>PERSONEL KİMLİĞİ</th>
+                        <th>GÜNCEL YEVMİYE</th>
+                        <th class="text-center">İŞLEMLER</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                    <tr class="emp-row" data-id="{{ emp.id }}" data-name="{{ emp.name }}">
+                        <td class="ps-4 text-muted fw-bold">{{ loop.index }}</td>
+                        <td>
+                            <div class="fw-bold text-info">{{ emp.name }}</div>
+                            <small class="opacity-50 font-monospace">{{ emp.tc_no or 'TC KAYITSIZ' }}</small>
+                        </td>
+                        <td class="text-success fw-bold font-monospace">₺{{ "{:,.2f}".format(emp.daily_wage) }}</td>
+                        <td class="text-center">
+                            <button type="button" onclick="openFullPanel('{{ emp.id }}')" class="btn btn-sm btn-dark border-secondary px-3">
+                                <i class="fas fa-folder-open me-2 text-info"></i>DOSYA
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fullPanelModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content shadow-lg" data-theme="dark">
+            <div class="modal-header">
+                <h6 class="modal-title text-white fw-bold"><i class="fas fa-microchip me-2 text-info"></i> OPERASYON MERKEZİ: <span id="m_title" class="text-info text-uppercase">...</span></h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-4 border-end border-secondary pe-4">
+                        <form id="fullUpdateForm" method="POST">
+    <div class="mb-3"><label class="small fw-bold opacity-50">Tam İsim</label><input type="text" name="name" id="f_name" class="form-control"></div>
+    <div class="mb-3"><label class="small fw-bold opacity-50">TC Kimlik</label><input type="text" name="tc_no" id="f_tc" class="form-control"></div>
+    <div class="mb-3"><label class="small fw-bold opacity-50">İletişim Hattı</label><input type="text" name="phone" id="f_phone" class="form-control"></div>
+    
+    <hr class="opacity-10">
+    
+    <div class="mb-3">
+        <label class="small fw-bold text-info opacity-75">GÜNCEL BİRİM YEVMİYE (₺)</label>
+        <input type="number" step="0.01" name="daily_wage" id="f_wage" class="form-control border-info">
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-6">
+            <label class="small fw-bold opacity-50" style="font-size: 10px;">GÜNCELLEME BAŞLANGIÇ</label>
+            <input type="date" name="wage_start_date" id="f_wage_start" class="form-control">
+        </div>
+        <div class="col-6">
+            <label class="small fw-bold opacity-50" style="font-size: 10px;">GÜNCELLEME BİTİŞ</label>
+            <input type="date" name="wage_end_date" id="f_wage_end" class="form-control">
+        </div>
+        <div class="col-12">
+            <small class="text-muted" style="font-size: 9px;">* Sadece bu aralıktaki kayıtlı puantajların birim fiyatı güncellenir.</small>
+        </div>
+    </div>
+    
+    <hr class="opacity-10">
+
+    <div class="mb-3"><label class="small fw-bold opacity-50">Sisteme Giriş</label><input type="date" name="entry_date" id="f_entry" class="form-control"></div>
+    <div class="mb-3"><label class="small fw-bold opacity-50">Özel Notlar</label><textarea name="address" id="f_address" class="form-control" rows="3"></textarea></div>
+    <button type="submit" class="btn btn-info w-100 fw-bold mt-2">VERİLERİ MÜHÜRLE VE GÜNCELLE</button>
+</form>
+                    </div>
+
+                    <div class="col-md-8 ps-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="text-info mb-0">HAREKET VE PUANTAJ GEÇMİŞİ</h6>
+                            <div class="d-flex gap-2">
+                                <input type="date" id="filter_start" class="form-control form-control-sm" style="width: 130px;">
+                                <input type="date" id="filter_end" class="form-control form-control-sm" style="width: 130px;">
+                                <button onclick="applyFilter()" class="btn btn-sm btn-outline-info">FİLTRE</button>
+                                <button type="button" onclick="exportPythonExcel()" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-file-excel"></i> EXCEL
+                                </button>
+                                <button onclick="printHistory()" class="btn btn-sm btn-success"><i class="fas fa-print"></i> YAZDIR</button>
+                            </div>
+                        </div>
+                        
+                        <div id="summary_box" class="row text-center mb-3 d-none p-3 border border-secondary mx-0" style="background: #0a0a0a;">
+                            <div class="col border-end border-secondary"><small class="d-block opacity-50">TOPLAM MESAI</small><b id="sum_work">0</b> G</div>
+                            <div class="col border-end border-secondary"><small class="d-block opacity-50">BRÜT HAKEDİŞ</small><b id="sum_hakedis" class="text-info">₺0</b></div>
+                            <div class="col border-end border-secondary"><small class="d-block opacity-50">ASGARİ ÖDEME</small><b id="sum_asgari_pay" class="text-warning">₺0</b></div>
+                            <div class="col"><small class="d-block opacity-50">ALINAN AVANS</small><b id="sum_advance" class="text-danger">₺0</b></div>
+                            <div class="col-12 mt-2 pt-2 border-top border-secondary">
+                                <small class="opacity-50">ÖDENECEK NET BAKİYE:</small> 
+                                <span id="sum_net" class="fw-bold fs-5 ms-2">₺0</span>
+                            </div>
+                        </div>
+
+                        <div class="history-scroll">
+                            <table class="table table-dark table-hover mb-0" style="font-size: 0.8rem;">
+                                <thead class="sticky-top bg-dark">
+                                    <tr>
+                                        <th>TARİH</th>
+                                        <th>MESAI</th>
+                                        <th>YEVMİYE</th>
+                                        <th class="text-info">HAKEDİŞ</th>
+                                        <th class="text-warning">ASGARİ</th>
+                                        <th class="text-danger">AVANS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="f_history_body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/xlsx.full.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/sweetalert2.all.min.js') }}"></script>
+
+<script>
+    let myModal = null;
+    let currentEmpId = null;
+    let fullHistoryData = [];
+    const contextMenu = document.getElementById('hzm-context-menu');
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const modalEl = document.getElementById('fullPanelModal');
+        if (modalEl) myModal = new bootstrap.Modal(modalEl);
+
+        document.querySelectorAll('.emp-row').forEach(row => {
+            row.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                currentEmpId = this.dataset.id;
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = e.clientX + 'px';
+                contextMenu.style.top = e.clientY + 'px';
+            });
+        });
+
+        document.addEventListener('click', () => contextMenu.style.display = 'none');
+    });
+
+    function openFullPanel(id) {
+    currentEmpId = id;
+    document.getElementById('f_history_body').innerHTML = '<tr><td colspan="6" class="text-center py-4">HZM VERİ TABANI SORGULANIYOR...</td></tr>';
+    
+    fetch(`/api/personel-detay-full/${id}`)
+        .then(res => res.json())
+        .then(data => {
+            // Temel Bilgiler
+            document.getElementById('m_title').innerText = data.info.name;
+            document.getElementById('f_name').value = data.info.name;
+            document.getElementById('f_tc').value = data.info.tc_no || '';
+            document.getElementById('f_phone').value = data.info.phone || '';
+            document.getElementById('f_wage').value = data.info.daily_wage;
+            document.getElementById('f_entry').value = data.info.entry_date;
+            document.getElementById('f_address').value = data.info.address || '';
+            document.getElementById('fullUpdateForm').action = `/calisan-guncelle/${id}`;
+
+            // --- HZM TARİH ARALIĞI OTOMASYONU ---
+            // Varsayılan olarak içinde bulunduğumuz ayın ilk ve son gününü seçelim
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+            document.getElementById('f_wage_start').value = firstDay;
+            document.getElementById('f_wage_end').value = lastDay;
+
+            // Veriyi sakla ve tabloyu çiz
+            fullHistoryData = data.history;
+            renderHistoryTable(fullHistoryData);
+            
+            if (myModal) myModal.show();
+        }).catch(err => Swal.fire('Hata', 'Veriler yüklenemedi.', 'error'));
+}
+    function renderHistoryTable(dataList) {
+    let html = '';
+    let tWork = 0, tHak = 0, tAdv = 0, tAsgariPay = 0;
+    
+    // Formdan ARALIK verilerini alıyoruz
+    const startDate = document.getElementById('f_wage_start').value; 
+    const endDate = document.getElementById('f_wage_end').value;
+    const newWage = parseFloat(document.getElementById('f_wage').value || 0);
+    
+    dataList.forEach(h => {
+        let rowAsgari = '-', rowAvans = '-', rowWork = '-', rowHakedis = '-';
+        
+        // --- HZM TARİH ARALIĞI HESAPLAMA MÜHÜRÜ ---
+        let dailyWageAtDay;
+        
+        // Tarih Kontrolü: Satır tarihi seçili aralığın İÇİNDE mi?
+        const isWithinRange = (startDate && endDate && h.date >= startDate && h.date <= endDate);
+
+        if (isWithinRange && newWage > 0) {
+            // Eğer aralıktaysa, formdaki yeni yevmiyeyi simüle et
+            dailyWageAtDay = newWage;
+        } else {
+            // Aralık dışındaysa, veritabanından gelen mühürlü yevmiyeyi kullan
+            // (h.daily_wage API'den gelen mühürlü değerdir)
+            dailyWageAtDay = h.daily_wage || 0;
+        }
+
+        if (h.desc === 'Puantaj') {
+            let workVal = parseFloat(h.work_value || 0);
+            let hakVal = workVal * dailyWageAtDay; 
+            
+            tWork += workVal;
+            tHak += hakVal;
+            rowWork = workVal + ' G';
+            rowHakedis = '₺' + hakVal.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+        } else if (h.desc === 'Ödeme 1 (Maaş)') {
+            tAsgariPay += parseFloat(h.advance || 0);
+            rowAsgari = '₺' + Number(h.advance).toLocaleString('tr-TR', {minimumFractionDigits: 2});
+        } else {
+            tAdv += parseFloat(h.advance || 0);
+            rowAvans = '₺' + Number(h.advance).toLocaleString('tr-TR', {minimumFractionDigits: 2});
+        }
+
+        html += `<tr>
+            <td class="font-monospace">${h.date}</td>
+            <td>${rowWork}</td>
+            <td class="opacity-75 font-monospace ${isWithinRange ? 'text-info fw-bold' : ''}">
+                ₺${Number(dailyWageAtDay).toLocaleString('tr-TR', {minimumFractionDigits: 2})}
+            </td>
+            <td class="text-info fw-bold">${rowHakedis}</td>
+            <td class="text-warning">${rowAsgari}</td>
+            <td class="text-danger">${rowAvans}</td>
+        </tr>`;
+    });
+
+    // Alt toplamları ve UI güncellemelerini yapan kısım (Mevcut kodun devamı)
+    const netKalan = tHak - tAsgariPay - tAdv;
+    document.getElementById('f_history_body').innerHTML = html || '<tr><td colspan="6" class="text-center py-3">Kayıt bulunamadı.</td></tr>';
+    
+    document.getElementById('sum_work').innerText = tWork.toFixed(2);
+    document.getElementById('sum_hakedis').innerText = '₺' + tHak.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+    document.getElementById('sum_advance').innerText = '₺' + tAdv.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+    document.getElementById('sum_asgari_pay').innerText = '₺' + tAsgariPay.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+
+    const netEl = document.getElementById('sum_net');
+    if(netEl) {
+        netEl.innerText = '₺' + netKalan.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+        netEl.className = netKalan < 0 ? 'text-danger fw-bold fs-5 ms-2' : 'text-success fw-bold fs-5 ms-2';
+    }
+}
+
+    // ... (Alt toplam kodların aynı kalıyor)
+    const netKalan = tHak - tAsgariPay - tAdv;
+    document.getElementById('f_history_body').innerHTML = html || '<tr><td colspan="6" class="text-center py-3">Kayıt bulunamadı.</td></tr>';
+    
+    document.getElementById('sum_work').innerText = tWork.toFixed(2);
+    document.getElementById('sum_hakedis').innerText = '₺' + tHak.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+    document.getElementById('sum_advance').innerText = '₺' + tAdv.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+    document.getElementById('sum_asgari_pay').innerText = '₺' + tAsgariPay.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+
+    const netEl = document.getElementById('sum_net');
+    if(netEl) {
+        netEl.innerText = '₺' + netKalan.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+        netEl.className = netKalan < 0 ? 'text-danger fw-bold fs-5 ms-2' : 'text-success fw-bold fs-5 ms-2';
+    }
+    document.getElementById('summary_box').classList.remove('d-none');
+
+
+   function printHistory() {
+    const personName = document.getElementById('m_title').innerText;
+    const s_work = document.getElementById('sum_work').innerText;
+    const s_hakedis = document.getElementById('sum_hakedis').innerText;
+    const s_asgari = document.getElementById('sum_asgari_pay').innerText;
+    const s_avans = document.getElementById('sum_advance').innerText;
+    const s_net = document.getElementById('sum_net').innerText;
+
+    let tableRows = '';
+    const rows = document.querySelectorAll('#f_history_body tr');
+    rows.forEach(tr => {
+        if (tr.cells.length > 1) {
+            tableRows += `<tr>
+                <td>${tr.cells[0].innerText}</td>
+                <td>${tr.cells[1].innerText}</td>
+                <td>${tr.cells[2].innerText}</td>
+                <td>${tr.cells[3].innerText}</td>
+                <td>${tr.cells[4].innerText}</td>
+                <td>${tr.cells[5].innerText}</td>
+            </tr>`;
+        }
+    });
+
+    let oldFrame = document.getElementById('hzmPrintFrame');
+    if (oldFrame) oldFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'hzmPrintFrame';
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+        <html>
+        <head>
+            <style>
+                body { font-family: sans-serif; padding: 20px; color: #000; }
+                h1 { border-bottom: 2px solid #000; margin-bottom: 10px; font-size: 18px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                th, td { border: 1px solid #000; padding: 6px; text-align: left; font-size: 10px; }
+                th { background: #f0f0f0; }
+                .summary { margin-bottom: 15px; font-weight: bold; background: #f9f9f9; padding: 10px; border: 1px solid #ddd; font-size: 11px; }
+                
+                /* HZM İMZA ALANI CSS */
+                .signature-container { margin-top: 50px; width: 100%; }
+                .sig-box { float: left; width: 33%; text-align: center; font-size: 11px; font-weight: bold; }
+                .sig-line { margin-top: 40px; border-top: 1px solid #000; width: 80%; margin-left: 10%; }
+            </style>
+        </head>
+        <body>
+            <h1>TSI NEXUS - PERSONEL OPERASYON RAPORU</h1>
+            <p><b>Personel:</b> ${personName} | <b>Rapor Tarihi:</b> ${new Date().toLocaleDateString('tr-TR')}</p>
+            <div class="summary">
+                MESAİ: ${s_work} G | HAKEDİŞ: ${s_hakedis} | ASGARİ: ${s_asgari} | AVANS: ${s_avans} | NET: ${s_net}
+            </div>
+            <table>
+                <thead><tr><th>TARİH</th><th>MESAI</th><th>YEVMİYE</th><th>HAKEDİŞ</th><th>ASGARİ</th><th>AVANS</th></tr></thead>
+                <tbody>${tableRows}</tbody>
+            </table>
+
+            <div class="signature-container">
+                <div class="sig-box">HAZIRLAYAN<div class="sig-line"></div></div>
+                <div class="sig-box">ÇALIŞAN<div class="sig-line"></div></div>
+                <div class="sig-box">YÖNETİCİ<div class="sig-line"></div></div>
+            </div>
+            // ... imza alanının bittiği yerin hemen altına:
+            <div style="margin-top: 30px; text-align: center; font-size: 9px; color: #555; text-transform: uppercase; letter-spacing: 1px;">
+    *** BU BELGE HZM TSI: Technical Statistics & Integration SİSTEMİ TARAFINDAN OLUŞTURULMUŞTUR. RESMİ EVRAK OLARAK KULLANILABİLİR. ***
+</div>
+        </body>
+        </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    }, 500);
+}
+
+    function applyFilter() {
+        const start = document.getElementById('filter_start').value;
+        const end = document.getElementById('filter_end').value;
+        if (!start || !end) return;
+        const filtered = fullHistoryData.filter(h => h.date >= start && h.date <= end);
+        renderHistoryTable(filtered);
+    }
+
+    function exportPythonExcel() {
+        if (currentEmpId) window.open(`/export-detay-excel/${currentEmpId}`, '_blank');
+    }
+
+    document.getElementById('cm-sil-btn').addEventListener('click', function() {
+        if (!currentEmpId) return;
+        Swal.fire({
+            title: 'SİSTEMDEN SİLİNSİN Mİ?',
+            text: "Tüm puantaj ve ödeme verileri yok olur!",
+            icon: 'warning',
+            showCancelButton: true,
+            background: '#0a0a0a',
+            color: '#d1d1d1',
+            confirmButtonColor: '#ff0000',
+            confirmButtonText: 'EVET, SİL',
+            cancelButtonText: 'İPTAL'
+        }).then((result) => {
+            if (result.isConfirmed) window.location.href = `/calisan-sil/${currentEmpId}`;
+        });
+    });
+</script>
+{% endblock %}

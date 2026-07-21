@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold text-dark">TSI NEXUS</h1>
+        <p class="text-secondary fw-bold">TECHNICAL STATISTICS & INTEGRATION</p>
+        <hr class="mx-auto" style="width: 100px; height: 4px; background: #000;">
+    </div>
+
+    <div class="row g-4 justify-content-center">
+        <div class="col-md-4">
+            <a href="{{ url_for('calisanlar') }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 p-4 text-center btn-outline-dark">
+                    <i class="fas fa-users fa-3x mb-3 text-dark"></i>
+                    <h5 class="fw-bold text-dark">PERSONEL YÖNETİMİ</h5>
+                    <small class="text-muted">Kayıt ve Bilgi Düzenleme</small>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4">
+            <a href="{{ url_for('puantaj') }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 p-4 text-center btn-outline-dark">
+                    <i class="fas fa-calendar-check fa-3x mb-3 text-dark"></i>
+                    <h5 class="fw-bold text-dark">GÜNLÜK PUANTAJ</h5>
+                    <small class="text-muted">Devam Kontrolü ve Yevmiye</small>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4">
+            <a href="{{ url_for('patron_ekrani') }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-0 p-4 text-center bg-dark text-white">
+                    <i class="fas fa-user-tie fa-3x mb-3 text-primary"></i>
+                    <h5 class="fw-bold text-white">PATRON EKRANI</h5>
+                    <small class="opacity-75">Günlük Özet ve Mali Raporlar</small>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

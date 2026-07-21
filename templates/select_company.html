@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Şirket Seç | HZM</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='fontawesome/css/all.min.css') }}">
+    <style>
+        /* --- HZM INTRO SEQUENCE CSS --- */
+        #hzm-splash {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100vh;
+            background: #000;
+            z-index: 10000;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        .hzm-logo-anim {
+            width: 180px;
+            opacity: 0;
+            transform: scale(0.4);
+            filter: blur(15px);
+            animation: hzmLogoFocus 2.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+            z-index: 10002;
+        }
+
+        /* --- HZM INTRO SEQUENCE CSS --- */
+/* ... diğer kodlar ... */
+
+.intro-bg-slide {
+    position: absolute;
+    top: -100%; left: 0; width: 100%; height: 100%;
+    
+    /* Arka plan görselin */
+    background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('/static/img/hzm-background.jpg');
+    background-size: cover;
+    background-position: center;
+    
+    z-index: 10001;
+    animation: hzmSlideDown 1.5s 2.2s cubic-bezier(0.77, 0, 0.175, 1) forwards;
+}
+
+/* Çıkış Efekti: Süreyi 2.5 saniyeye çıkardım, çok daha akıcı sönecek */
+/* --- HZM INTRO SEQUENCE CSS --- */
+/* ... diğer kodlar ... */
+
+.hzm-logo-anim {
+    /* LOGO BOYUTUNU BÜYÜTTÜM: 180px -> 350px */
+    width: 350px; 
+    
+    opacity: 0;
+    transform: scale(0.4);
+    filter: blur(15px);
+    animation: hzmLogoFocus 2.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+    z-index: 10002;
+}
+
+/* ... Diğer Keyframes Kodları (hzmLogoFocus ve hzmSlideDown) ... */
+
+/* ÇIKIŞ EFEKTİ: SÜREYİ 4 SANİYEYE ÇIKARDIM (ÇOK YAVAŞ) */
+.hzm-fade-out {
+    opacity: 0 !important;
+    visibility: hidden;
+    /* transition süresini uzattık ve cubic-bezier ekledik (daha akıcı) */
+    transition: opacity 4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* ... Diğer CSS ... */
+
+/* ... diğer animasyon kodları ... */
+
+        @keyframes hzmLogoFocus {
+            0% { transform: scale(0.4); opacity: 0; filter: blur(15px); }
+            100% { transform: scale(1.1); opacity: 1; filter: blur(0); }
+        }
+
+        @keyframes hzmSlideDown {
+            0% { top: -100%; }
+            100% { top: 0; }
+        }
+
+        .hzm-fade-out {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1.2s ease-in-out;
+        }
+
+        body.intro-active { overflow: hidden; }
+        /* --- END INTRO CSS --- */
+
+        body { background: #0c0c0c; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        .header { text-align: center; margin-bottom: 50px; margin-top: 30px; }
+        
+        @media (min-width: 1200px) { .col-lg-5-custom { width: 20%; flex: 0 0 20%; } }
+
+        .company-card { 
+            background: #121212; border: 1px solid #1f1f1f; border-radius: 12px; padding: 20px; 
+            text-align: center; transition: 0.3s; position: relative; height: 220px; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; margin-bottom: 20px;
+        }
+        
+        .company-card:hover { transform: translateY(-8px); border-color: #1e2a78; background: #161616; }
+        .company-card img { height: 60px; object-fit: contain; margin-bottom: 15px; }
+        .company-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 15px; text-transform: uppercase; }
+
+        .add-company-card { border: 2px dashed #2a2a2a; background: transparent; }
+        .add-company-card i { font-size: 40px; color: #444; margin-bottom: 10px; transition: 0.3s; }
+        .add-company-card span { color: #666; font-weight: 600; }
+        .add-company-card:hover i { color: #1e2a78; transform: scale(1.1); }
+
+        .enter-btn { background: #1e2a78; border: none; font-size: 12px; padding: 8px 15px; border-radius: 5px; color: white; text-decoration: none; width: 100%; display: block; }
+        .del-btn { position: absolute; top: 10px; right: 10px; color: #444; border: none; background: none; z-index: 5; }
+        .del-btn:hover { color: #ff4d4d; }
+
+        .modal-content { background: #121212; border: 1px solid #1e2a78; color: white; border-radius: 15px; }
+        .modal-header { border-bottom: 1px solid #1f1f1f; }
+        .form-control { background: #0c0c0c; border: 1px solid #2a2a2a; color: white; margin-bottom: 15px; }
+        .form-control:focus { background: #0c0c0c; color: white; border-color: #1e2a78; box-shadow: none; }
+        
+        .restore-item { background: #1a1a1a; border: 1px solid #333; margin-bottom: 10px; padding: 15px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .restore-list { max-height: 400px; overflow-y: auto; }
+    </style>
+</head>
+<body class="intro-active">
+
+<div id="hzm-splash">
+    <div class="intro-content">
+        <img src="/static/img/logo.png" class="hzm-logo-anim" alt="HZM">
+    </div>
+    <div class="intro-bg-slide"></div>
+</div>
+
+<div class="container-fluid px-5 mt-4">
+    <div class="header">
+        <h2><i class="fa fa-building me-2"></i> ŞİRKET SEÇİM MERKEZİ</h2>
+        <p class="text-muted small">NEXUS CORE | SİSTEM KURTARMA İÇİN CTRL+SHIFT+G</p>
+    </div>
+
+    <div class="row gx-3">
+        <div class="col-6 col-md-4 col-lg-5-custom">
+            <div class="company-card add-company-card" data-bs-toggle="modal" data-bs-target="#addCompanyModal">
+                <i class="fa fa-plus"></i>
+                <span>ŞİRKET EKLE</span>
+            </div>
+        </div>
+
+        {% for c in companies %}
+        <div class="col-6 col-md-4 col-lg-5-custom">
+            <div class="company-card">
+                <button type="button" class="del-btn" onclick="openSecureDelete('{{ c.id }}', '{{ c.name }}')">
+                    <i class="fa fa-trash-can"></i>
+                </button>
+                
+                {% if c.logo %}
+                    <img src="/{{ c.logo }}">
+                {% else %}
+                    <div style="height:60px; font-size:30px; color:#333;"><i class="fa fa-city"></i></div>
+                {% endif %}
+                
+                <div class="company-name text-truncate w-100 px-2">{{ c.name }}</div>
+                <button onclick="handleEntry('{{ c.id }}', '{{ has_pass }}')" class="enter-btn">SİSTEME GİRİŞ</button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="modal fade" id="addCompanyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Şirket Oluştur</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="/add-company" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <label class="small text-muted">Şirket Adı *</label>
+                    <input type="text" name="name" class="form-control" required placeholder="HZM Proje...">
+                    <label class="small text-muted">Giriş Şifresi (Opsiyonel)</label>
+                    <input type="password" name="password" class="form-control" placeholder="****">
+                    <label class="small text-muted">Telefon / Adres</label>
+                    <input type="text" name="phone" class="form-control" placeholder="05xx...">
+                    <textarea name="address" class="form-control" rows="2" placeholder="Adres..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary w-100" style="background:#1e2a78; border:none;">Kaydet ve Oluştur</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header border-0"><h6 class="modal-title">Şirket Şifresi</h6></div>
+            <div class="modal-body py-2">
+                <input type="password" id="entryPassword" class="form-control text-center" placeholder="****" autofocus>
+                <div id="entryError" class="text-danger small text-center mt-2" style="display:none;">Hatalı Şifre!</div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-primary w-100" id="btnConfirmEntry">Giriş Yap</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="secureDeleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header"><h5 class="modal-title text-danger">Silme İşlemini Onayla</h5></div>
+            <div class="modal-body text-center">
+                <p><strong id="delName" class="text-info"></strong> kalıcı olarak silinecek.</p>
+                <input type="password" id="adminPassForDelete" class="form-control" placeholder="Onay için şirket şifresini girin">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Vazgeç</button>
+                <button type="button" class="btn btn-danger" id="btnSecureDelete">Şirketi Sil</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="recoveryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-info">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa fa-clock-rotate-left me-2"></i> Sistem Kurtarma Paneli</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="recoveryList" class="restore-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+<script>
+/* HZM AKILLI INTRO KONTROLÜ */
+document.addEventListener('DOMContentLoaded', function() {
+    const splash = document.getElementById('hzm-splash');
+    
+    // Daha önce bu sekmede animasyon oynatıldı mı kontrol et
+    if (sessionStorage.getItem('hzm_intro_played')) {
+        // Eğer oynatıldıysa splash ekranını hiç göstermeden direkt sil
+        splash.remove();
+        document.body.classList.remove('intro-active');
+    } else {
+        // Eğer ilk defa açılıyorsa animasyonu oynat
+        setTimeout(() => {
+            splash.classList.add('hzm-fade-out');
+            document.body.classList.remove('intro-active');
+            
+            // Animasyon bittiğinde oynatıldı işaretini koy
+            sessionStorage.setItem('hzm_intro_played', 'true');
+            
+            setTimeout(() => { 
+                splash.remove(); 
+            }, 4200); 
+        }, 4500);
+    }
+});
+
+    /* EXISTING SYSTEM LOGIC */
+    let selectedId = null;
+    const passModal = new bootstrap.Modal(document.getElementById('passwordModal'));
+    const secureDelModal = new bootstrap.Modal(document.getElementById('secureDeleteModal'));
+    const recoveryModal = new bootstrap.Modal(document.getElementById('recoveryModal'));
+
+    function handleEntry(id, hasPassword) {
+        selectedId = id;
+        if (hasPassword === 'true') {
+            document.getElementById('entryPassword').value = "";
+            document.getElementById('entryError').style.display = "none";
+            passModal.show();
+        } else {
+            window.location.href = "/set-company/" + id;
+        }
+    }
+
+    document.getElementById('btnConfirmEntry').onclick = function() {
+        const pass = document.getElementById('entryPassword').value;
+        const formData = new FormData();
+        formData.append('password', pass);
+
+        fetch('/set-company/' + selectedId, { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) window.location.href = "/";
+            else document.getElementById('entryError').style.display = "block";
+        })
+        .catch(err => alert("Bağlantı Hatası!"));
+    };
+
+    function openSecureDelete(id, name) {
+        selectedId = id;
+        document.getElementById('delName').innerText = name;
+        document.getElementById('adminPassForDelete').value = "";
+        secureDelModal.show();
+    }
+
+    document.getElementById('btnSecureDelete').onclick = function() {
+        const pass = document.getElementById('adminPassForDelete').value;
+        fetch('/api/verify-admin', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: pass, company_id: selectedId})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                fetch('/delete-company/' + selectedId, { method: 'POST' })
+                .then(r => r.json())
+                .then(d => { if(d.success) location.reload(); });
+            } else {
+                alert("Hatalı Şifre!");
+            }
+        });
+    };
+
+    function restoreCompany(id) {
+        if(!confirm("Bu şirketi geri yüklemek istediğinize emin misiniz?")) return;
+        fetch('/restore-company/' + id, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) location.reload();
+            else alert("Hata: " + data.message);
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.shiftKey && (e.key === 'G' || e.key === 'g')) {
+            e.preventDefault();
+            const listDiv = document.getElementById('recoveryList');
+            listDiv.innerHTML = '<div class="text-center text-primary py-4"><i class="fa fa-spinner fa-spin me-2"></i>Veritabanı taranıyor...</div>';
+            recoveryModal.show();
+            
+            fetch('/get-deleted-companies')
+            .then(res => res.json())
+            .then(data => {
+                listDiv.innerHTML = "";
+                if(!data || data.length === 0) {
+                    listDiv.innerHTML = '<div class="text-center text-muted py-4">Silinmiş kayıt bulunamadı.</div>';
+                    return;
+                }
+                data.forEach(comp => {
+                    listDiv.innerHTML += `
+                        <div class="restore-item">
+                            <div>
+                                <div class="fw-bold text-white">${comp.name}</div>
+                                <small class="text-muted">ID: ${comp.id}</small>
+                            </div>
+                            <button onclick="restoreCompany('${comp.id}')" class="btn btn-sm btn-outline-info">
+                                <i class="fa fa-undo me-1"></i> Geri Yükle
+                            </button>
+                        </div>`;
+                });
+            });
+        }
+    });
+</script>
+</body>
+</html>

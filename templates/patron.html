@@ -1,0 +1,493 @@
+{% extends "layout.html" %}
+{% block title %}Patron Ekranı | TSİ{% endblock %}
+
+{% block content %}
+<style>
+    /* HZM INDUSTRIAL MINIMALISM & RADAR DESIGN */
+    :root {
+        --hzm-accent: #0062ff;
+        --hzm-dark-card: #0c0c0c;
+        --hzm-border: #1a1a1a;
+        --hzm-success: #28a745;
+        --hzm-danger: #dc3545;
+    }
+
+    .patron-card {
+        background: var(--hzm-dark-card);
+        border: 1px solid var(--hzm-border);
+        border-radius: 8px;
+        color: #ffffff;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    .patron-card:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .panel-section-title {
+        font-size: 0.75rem;
+        font-weight: 800;
+        letter-spacing: 2px;
+        color: #888888;
+        border-bottom: 1px solid var(--hzm-border);
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+    }
+
+    .mini-stat {
+        font-size: 1.8rem;
+        font-weight: 900;
+        letter-spacing: -1px;
+    }
+
+    .overtime-bar-container {
+        background: #151515;
+        border-radius: 4px;
+        height: 6px;
+        overflow: hidden;
+        margin-top: 5px;
+    }
+    .overtime-bar {
+        background: var(--hzm-accent);
+        height: 100%;
+        border-radius: 4px;
+    }
+
+    /* =========================================================================
+       HZM PURE JS SAF TRANSLUCENT MODAL TASARIMI (BOOTSTRAP BAĞIMSIZ)
+       ========================================================================= */
+    .hzm-custom-modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        z-index: 1050;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        animation: hzmFadeIn 0.25s ease-out forwards;
+    }
+
+    .hzm-custom-modal-content {
+        background: rgba(30, 30, 30, 0.7) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: 14px;
+        width: 100%;
+        max-width: 500px;
+        padding: 25px;
+        color: #ffffff;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+        transform: scale(0.9);
+        animation: hzmScaleUp 0.25s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+    }
+
+    @keyframes hzmFadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes hzmScaleUp { from { transform: scale(0.9); } to { transform: scale(1); } }
+
+    .hzm-custom-modal-content .form-control, 
+    .hzm-custom-modal-content .form-select {
+        background: rgba(0, 0, 0, 0.5) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important;
+        border-radius: 6px !important;
+    }
+
+    .hzm-custom-modal-content .form-control:focus, 
+    .hzm-custom-modal-content .form-select:focus {
+        border-color: var(--hzm-accent) !important;
+        box-shadow: 0 0 0 3px rgba(0, 98, 255, 0.25) !important;
+        outline: none;
+    }
+
+    /* =========================================================================
+       HZM INDUSTRIAL SQUARE NOTE GRID SYSTEM (KARE KUTUCUK YAPISI)
+       ========================================================================= */
+    .hzm-note-grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .note-square-card {
+        background: #060606;
+        border: 1px solid var(--hzm-border);
+        border-radius: 6px;
+        padding: 18px;
+        aspect-ratio: 1 / 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        position: relative;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .note-square-card:hover {
+        border-color: rgba(0, 98, 255, 0.4);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .note-square-add-trigger {
+        background: rgba(12, 12, 12, 0.4);
+        border: 1px dashed #262626;
+        border-radius: 6px;
+        aspect-ratio: 1 / 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #555555;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .note-square-add-trigger:hover {
+        border-color: var(--hzm-accent);
+        color: var(--hzm-accent);
+        background: rgba(0, 98, 255, 0.02);
+    }
+
+    .note-card-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .note-card-body {
+        font-size: 0.8rem;
+        color: #8c8c8c;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 5;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: break-word;
+        flex-grow: 1;
+        margin-top: 8px;
+    }
+
+    .note-card-footer {
+        border-top: 1px solid #121212;
+        padding-top: 8px;
+        margin-top: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .note-delete-btn {
+        background: transparent;
+        border: none;
+        color: #444444;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: color 0.2s;
+        padding: 0 4px;
+    }
+
+    .note-delete-btn:hover {
+        color: var(--hzm-danger);
+    }
+</style>
+
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1 text-uppercase"><i class="fas fa-user-tie me-2" style="color: var(--hzm-accent);"></i>PATRON ANALİTİK PANELİ</h2>
+        <p class="text-secondary small fw-bold mb-0">TSI CORE V4.0 // MAKRO VE MİKRO MALİ GÖSTERGELER</p>
+    </div>
+    <div class="d-print-none bg-dark p-2 border border-secondary d-flex align-items-center gap-2" style="border-radius: 6px;">
+        <form method="GET" action="{{ url_for('patron_ekrani') }}" class="d-flex align-items-center gap-2 mb-0" id="radar-form">
+            <span class="small fw-bold text-warning px-1">RADAR TARİHİ:</span>
+            <input type="date" name="target_date" class="form-control btn-light text-black border-secondary fw-bold form-control-sm" value="{{ selected_date }}" onchange="this.form.submit()">
+        </form>
+    </div>
+</div>
+
+<div class="panel-section-title text-uppercase"><i class="fas fa-chart-line me-2"></i>Şirket Makro Finansal Durumu (Tüm Zamanlar Devirli Toplam)</div>
+<div class="row g-3 mb-4 text-center">
+    <div class="col-md-4">
+        <div class="card patron-card shadow-sm border-0 p-3">
+            <small class="fw-bold text-muted small text-uppercase">Şirket Toplam Brüt Hak Ediş Borcu</small>
+            <div class="mini-stat text-white mt-2">₺{{ "{:,.2f}".format(sirket_toplam_brut) }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card patron-card shadow-sm border-0 p-3">
+            <small class="fw-bold text-muted small text-uppercase">Şirket Toplam Yapılan Ödemeler</small>
+            <div class="mini-stat text-primary mt-2">₺{{ "{:,.2f}".format(sirket_toplam_odenen) }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card patron-card shadow-sm border-0 p-3" style="border-left: 4px solid {% if sirket_net_borc > 0 %}var(--hzm-danger){% else %}var(--hzm-success){% endif %} !important;">
+            <small class="fw-bold text-muted small text-uppercase">Şirket Açık Net Kalan Personel Alacağı</small>
+            <div class="mini-stat mt-2 {% if sirket_net_borc > 0 %}text-danger{% else %}text-success{% endif %}">
+                ₺{{ "{:,.2f}".format(sirket_net_borc) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel-section-title text-uppercase">
+    <i class="fas fa-crosshairs me-2"></i>Seçilen Günün Radar Analizi (<span id="radar-formatted-date">--.--.----</span>)
+</div>
+<div class="row g-3 mb-4 text-center">
+    <div class="col-md-4">
+        <div class="card patron-card border-0 p-3 bg-black">
+            <small class="fw-bold text-secondary small text-uppercase">O Gün Üretilen Hak Ediş</small>
+            <h3 class="fw-bold text-white mt-1 mb-0">₺{{ "{:,.2f}".format(daily_total) }}</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card patron-card border-0 p-3 bg-black">
+            <small class="fw-bold text-secondary small text-uppercase">O Gün Çıkış Yapılan Kasa (Avans/Maaş)</small>
+            <h3 class="fw-bold text-warning mt-1 mb-0">₺{{ "{:,.2f}".format(daily_avans) }}</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card patron-card border-0 p-3 bg-black">
+            <small class="fw-bold text-secondary small text-uppercase">Kayıtlı Aktif Personel Havuzu</small>
+            <h3 class="fw-bold text-info mt-1 mb-0">{{ active_staff }} PERSONEL</h3>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-7">
+        <div class="card patron-card border-0 h-100 p-3">
+            <div class="fw-bold text-white mb-3 text-uppercase small" style="letter-spacing: 1px;"><i class="fas fa-list-ol me-2 text-primary"></i>Günlük Yapılan İşlem Akışı</div>
+            <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                <table class="table table-dark table-hover align-middle mb-0 text-center border-0">
+                    <thead class="text-muted small fw-bold" style="background: #111;">
+                        <tr>
+                            <th class="ps-3 text-start">PERSONEL ADI</th>
+                            <th>İŞLEM TÜRÜ</th>
+                            <th class="text-end pe-3">İŞLEM TUTARI</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tr in transactions %}
+                        <tr>
+                            <td class="ps-3 fw-bold text-uppercase text-start">{{ tr.name }}</td>
+                            <td>
+                                <span class="badge {% if 'Puantaj' in tr.type %}bg-dark border border-primary text-primary{% else %}bg-dark border border-warning text-warning{% endif %} px-2 py-1 small">
+                                    {{ tr.type }}
+                                </span>
+                            </td>
+                            <td class="text-end pe-3 fw-bold text-white">₺{{ "{:,.2f}".format(tr.amount) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4 small">Seçilen tarihte herhangi bir puantaj veya ödeme hareketi mühürlenmemiş.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card patron-card border-0 h-100 p-3">
+            <div class="fw-bold text-white mb-3 text-uppercase small" style="letter-spacing: 1px;"><i class="fas fa-medal me-2 text-warning"></i>Kümülâtif Mesai Liderleri (Top 5)</div>
+            <div class="d-flex flex-column gap-3 mt-2">
+                {% for p in top_overtime %}
+                <div>
+                    <div class="d-flex justify-content-between align-items-center small fw-bold">
+                        <span class="text-uppercase text-white">{{ p.name }}</span>
+                        <span class="text-info">{{ "{:,.1f}".format(p.toplam_saat) }} Saat Mesai</span>
+                    </div>
+                    <div class="overtime-bar-container">
+                        <div class="overtime-bar" style="width: {{ (p.toplam_saat / top_overtime[0].toplam_saat) * 100 }}%;"></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4 small">Sistemde henüz kayıtlı mesai saati verisi bulunamadı.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="panel-section-title text-uppercase"><i class="fas fa-sticky-note me-2"></i>Sistem Hafıza Notları (Radar Not Günlüğü)</div>
+<div class="hzm-note-grid-container">
+    
+    <div class="note-square-add-trigger" onclick="openCreateNoteModal()" title="Yeni Hafıza Kaydı Mühürle">
+        <i class="fas fa-plus fa-2x mb-2"></i>
+        <span class="small fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px;">Not Ekle</span>
+    </div>
+
+    {% for note in notes_list %}
+    <div id="note-wrapper-{{ note.id }}">
+        <div class="note-square-card" 
+             ondblclick="openEditNoteModal({{ note.id }}, '{{ note.title | replace('\'', '\\\'') }}', '{{ note.employee_id if note.employee_id else 'all' }}')"
+             title="Düzenlemek için çift tıklayın">
+            <div>
+                <div class="note-card-title" id="note-title-render-{{ note.id }}">{{ note.title }}</div>
+                {% if note.emp_name %}
+                <span class="badge bg-dark border border-primary text-primary px-2 py-1" style="font-size: 0.62rem; font-weight: 700;">
+                    <i class="fas fa-user me-1"></i>{{ note.emp_name | upper }}
+                </span>
+                {% else %}
+                <span class="badge bg-dark border border-secondary text-muted px-2 py-1" style="font-size: 0.62rem;">
+                    <i class="fas fa-globe me-1"></i>GENEL NOT
+                </span>
+                {% endif %}
+                <div class="note-card-body" id="note-content-render-{{ note.id }}">{{ note.content }}</div>
+            </div>
+            <div class="note-card-footer">
+                <span class="text-muted" style="font-size: 0.68rem; font-weight: bold;">
+                    <i class="far fa-clock me-1"></i>{{ note.created_at.split(' ')[1][:5] if ' ' in note.created_at else '00:00' }}
+                </span>
+                <button class="note-delete-btn" onclick="event.stopPropagation(); deleteSystemNote({{ note.id }})" title="Bu notu hafızadan sil">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="hzm-custom-modal-backdrop" id="hzmNoteModalWrapper">
+    <div class="hzm-custom-modal-content">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-white text-uppercase m-0" id="hzmModalTitle" style="font-size: 1.1rem; letter-spacing: 0.5px;">Yeni Personel Notu Ekle</h5>
+            <button onclick="toggleHzmModal(false)" style="background:none; border:none; color:#fff; font-size:1.2rem; cursor:pointer; opacity:0.6;"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="hzmNoteForm">
+            <input type="hidden" name="note_id" id="form-note-id" value="">
+            <input type="hidden" name="date" value="{{ selected_date }}">
+            
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="form-label text-secondary small fw-bold text-uppercase mb-1">Personel Seç</label>
+                    <select name="employee_id" id="form-employee-id" class="form-select small fw-bold">
+                        <option value="all">Genel Not (Şirket Notu)</option>
+                        {% for staff in all_staff %}
+                        <option value="{{ staff.id }}">{{ staff.name | upper }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label text-secondary small fw-bold text-uppercase mb-1">Tarih Seç</label>
+                    <input type="text" class="form-control small fw-bold text-muted" id="modal-date-display" readonly disabled>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label text-secondary small fw-bold text-uppercase mb-1">Not Başlığı (İsteğe Bağlı)</label>
+                <input type="text" name="title" id="form-note-title" class="form-control small" placeholder="Boş bırakılırsa ilk iki kelime alınır..." autocomplete="off">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label text-secondary small fw-bold text-uppercase mb-1">Not Detayı</label>
+                <textarea name="content" id="form-note-content" class="form-control small" rows="5" placeholder="Günlük operasyonel detayları buraya giriniz..." required></textarea>
+            </div>
+
+            <div class="d-flex justify-content-start gap-2 pt-2">
+                <button type="submit" class="btn btn-light fw-bold px-4 btn-sm" style="border-radius: 4px;">Kaydet</button>
+                <button type="button" class="btn btn-outline-secondary fw-bold px-4 btn-sm" style="border-radius: 4px; color: #fff; border-color: #444;" onclick="toggleHzmModal(false)">İptal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleHzmModal(show) {
+        const modalBackdrop = document.getElementById("hzmNoteModalWrapper");
+        if(modalBackdrop) {
+            modalBackdrop.style.display = show ? "flex" : "none";
+        }
+    }
+
+    // Sıfırdan yeni kayıt oluşturma tetikleyicisi
+    function openCreateNoteModal() {
+        document.getElementById("hzmModalTitle").innerText = "Yeni Personel Notu Ekle";
+        document.getElementById("form-note-id").value = "";
+        document.getElementById("form-employee-id").value = "all";
+        document.getElementById("form-note-title").value = "";
+        document.getElementById("form-note-content").value = "";
+        toggleHzmModal(true);
+    }
+
+    // ÇİFT TIKLAMA MOTORU: Mevcut verileri çekip güncelleme modunu açar
+    function openEditNoteModal(noteId, noteTitle, employeeId) {
+        document.getElementById("hzmModalTitle").innerText = "Hafıza Kaydını Düzenle";
+        document.getElementById("form-note-id").value = noteId;
+        document.getElementById("form-employee-id").value = employeeId;
+        document.getElementById("form-note-title").value = noteTitle;
+        
+        // Render edilmiş elementin içindeki ham metni doğrudan yakalıyoruz
+        const rawContent = document.getElementById(`note-content-render-${noteId}`).innerText;
+        document.getElementById("form-note-content").value = rawContent;
+        
+        toggleHzmModal(true);
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const rawDate = "{{ selected_date }}";
+        if (rawDate && rawDate !== "None" && rawDate.includes('-')) {
+            const formatted = rawDate.split('-').reverse().join('.');
+            document.getElementById('radar-formatted-date').innerText = formatted;
+            document.getElementById('modal-date-display').value = formatted;
+        }
+
+        const noteForm = document.getElementById("hzmNoteForm");
+        if(noteForm) {
+            noteForm.addEventListener("submit", function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                
+                fetch("{{ url_for('save_note') }}", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        toggleHzmModal(false);
+                        window.location.reload();
+                    } else {
+                        alert("Hata: " + data.message);
+                    }
+                })
+                .catch(err => console.error("TSI Not Engine Error:", err));
+            });
+        }
+    });
+
+    function deleteSystemNote(noteId) {
+        if(confirm("Bu hafıza notunu silmek istediğinizden emin misiniz?")) {
+            fetch(`/delete-note/${noteId}`, {
+                method: "POST"
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    const cardWrapper = document.getElementById(`note-wrapper-${noteId}`);
+                    if(cardWrapper) {
+                        cardWrapper.style.transition = "all 0.3s ease";
+                        cardWrapper.style.opacity = "0";
+                        cardWrapper.style.transform = "scale(0.8)";
+                        setTimeout(() => cardWrapper.remove(), 300);
+                    }
+                } else {
+                    alert("Not silinemedi: " + data.message);
+                }
+            })
+            .catch(err => console.error("TSI Note Deletion Error:", err));
+        }
+    }
+</script>
+{% endblock %}
